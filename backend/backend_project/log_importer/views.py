@@ -11,11 +11,10 @@ def upload_json(request):
             json_file = request.FILES['file']
             data = json.load(json_file)
 
-            # Process the data (save it to your model or use it as needed)
-            # Example: return the received data back as JSON response
+            # Process the data (you can add logic to save it to the database, etc.)
+            # For now, let's return the received data back as a JSON response.
             return JsonResponse({'status': 'success', 'data': data})
         
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
-
