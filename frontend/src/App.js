@@ -1,19 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
+import FileUpload from './components/FileUpload';
+import CollectionLog from './components/CollectionLog';
 
 function App() {
-  const [data, setData] = useState(null);
+  const [refreshLog, setRefreshLog] = useState(false);
 
-  useEffect(() => {
-    axios.get('http://localhost:8000/')
-      .then(response => setData(response.data))
-      .catch(error => console.error(error));
-  }, []);
+  const handleUploadComplete = () => {
+    // Toggle the refresh state to force CollectionLog to refetch data
+    setRefreshLog(!refreshLog);
+  };
 
   return (
     <div className="App">
-      <h1>Collection Log</h1>
-      {data ? <p>{data.Hello}</p> : <p>Loading...</p>}
+      <h1>Collection Log Uploader</h1>
+      <FileUpload onUploadComplete={handleUploadComplete} />
+
+      <h2>Collected Items</h2>
+      <CollectionLog refreshLog={refreshLog} />
     </div>
   );
 }

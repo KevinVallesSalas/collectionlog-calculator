@@ -1,6 +1,7 @@
 from django.urls import path
-from . import views
+from .views import upload_json, get_collection_log
 
 urlpatterns = [
-    path('upload/', views.upload_json, name='upload_json'),
+    path('upload/', upload_json, name='upload_json'),
+    path('collection-log/', get_collection_log, name='get_collection_log'),
 ]
