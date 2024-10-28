@@ -41,3 +41,34 @@ class CollectionLogItem(models.Model):
 
     def __str__(self):
         return f"{self.item.name} - {'Collected' if self.is_collected else 'Not Collected'}"
+    
+class CompletionRate(models.Model):
+    index = models.IntegerField()  # Corresponds to "Activity index"
+    activity_name = models.CharField(max_length=255)  # Corresponds to "Activity name"
+    completions_per_hour_main = models.FloatField()  # "Completions/hr (main)"
+    completions_per_hour_iron = models.FloatField()  # "Completions/hr (iron)"
+    extra_time_to_first_completion = models.FloatField(default=0)  # "Extra time to first completion (hours)"
+    notes = models.TextField(blank=True, null=True)  # "Notes"
+    verification_source = models.CharField(max_length=255, blank=True, null=True)  # "Verification source"
+
+    def __str__(self):
+        return f"{self.activity_name} (Index: {self.index})"
+
+
+class CompletionItem(models.Model):
+    completion_rate = models.ForeignKey(CompletionRate, related_name='items', on_delete=models.CASCADE)
+    item_id = models.IntegerField()  # "Item ID"
+    item_name = models.CharField(max_length=255)  # "Item name"
+    completed = models.BooleanField()  # "Completed"
+    requires_previous = models.BooleanField()  # "Requires previous"
+    active = models.BooleanField()  # "Active"
+    exact = models.BooleanField()  # "Exact"
+    independent = models.BooleanField()  # "Independent"
+    drop_rate_attempts = models.FloatField()  # "Drop rate (attempts)"
+    e_and_i = models.CharField(max_length=255, blank=True, null=True)  # "E&I"
+    e_only = models.CharField(max_length=255, blank=True, null=True)  # "E"
+    i_only = models.CharField(max_length=255, blank=True, null=True)  # "I"
+    neither_inverse = models.FloatField(null=True, blank=True)  # "Neither^(-1)"
+
+    def __str__(self):
+        return f"{self.item_name} for {self.completion_rate.activity_name} (Item ID: {self.item_id})"

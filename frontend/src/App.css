@@ -36,3 +36,14 @@
     transform: rotate(360deg);
   }
 }
+
+nav button {
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+nav button.active {
+  background-color: #007bff;
+  color: white;
+}
+
