@@ -1,12 +1,15 @@
-import requests
+import requests 
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-from django.db.models import F
-from django.db.models import Case, When, Value, FloatField
-from django.db.models import ExpressionWrapper
 import json
-from .models import Item, Tab, LogEntry, KillCount, CompletionRate
-
+from .models import Item, Tab, LogEntry, KillCount, CompletionRate, ActivityMap, CollectionLogItem
+from .calculations import (
+    calculate_effective_droprate_neither,
+    calculate_effective_droprate_independent,
+    calculate_time_to_exact,
+    calculate_time_to_ei,
+    calculate_time_to_next_log_slot,
+)
 
 @csrf_exempt
 def upload_json(request):
@@ -15,24 +18,18 @@ def upload_json(request):
             json_file = request.FILES['file']
             data = json.load(json_file)
             tabs_data = data.get('tabs', {})
-            processed_data = []
+            user_data = {'completed_items': set()}
 
             for tab_name, entries in tabs_data.items():
                 for entry_name, entry_data in entries.items():
                     for item_data in entry_data.get('items', []):
-                        processed_data.append({
-                            'id': item_data['id'],
-                            'name': item_data['name'],
-                            'obtained': item_data['obtained']
-                        })
+                        if item_data['obtained']:
+                            # Add completed item IDs to the user_data dictionary
+                            user_data['completed_items'].add(item_data['id'])
 
-                    for kill_data in entry_data.get('killCounts', []):
-                        processed_data.append({
-                            'name': kill_data['name'],
-                            'amount': kill_data['amount']
-                        })
-
-            return JsonResponse({'status': 'success', 'data': processed_data})
+            # Return user data along with a success message
+            return JsonResponse({'status': 'success', 'user_data': user_data})
+        
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
@@ -84,60 +81,79 @@ def get_collection_log(request):
         }
         for item in items
     ]
-
     return JsonResponse({'status': 'success', 'data': data})
 
-def calculate_completion_rates(request):
-    # Fetch user's obtained items from the collection log
-    obtained_item_ids = Item.objects.filter(obtained=True).values_list('item_id', flat=True)
+def calculate_completion_data(activity_index, is_iron=False, user_data=None):
+    """ Helper function to calculate completion data for a given activity index, using main or iron rates. """
+    try:
+        completion_rate = CompletionRate.objects.get(activity_index=activity_index)
+        completions_per_hour = (
+            completion_rate.completions_per_hour_iron if is_iron else completion_rate.completions_per_hour_main
+        )
 
-    # Prepare a list to store the completion times by activity
-    completion_data = []
+        # Pass user_data to calculation functions
+        droprate_neither = calculate_effective_droprate_neither(activity_index, user_data)
+        droprate_independent = calculate_effective_droprate_independent(activity_index, user_data)
+        time_to_exact = calculate_time_to_exact(activity_index, completions_per_hour, user_data)
+        time_to_ei = calculate_time_to_ei(activity_index, completions_per_hour, user_data)
+        time_to_next_log_slot = calculate_time_to_next_log_slot(activity_index, completions_per_hour, user_data)
 
-    # Query the CompletionRate data to calculate completion times
-    completion_rates = CompletionRate.objects.all()
+        return {
+            'activity_index': activity_index,
+            'activity_name': completion_rate.activity_name,
+            'droprate_neither': droprate_neither,
+            'droprate_independent': droprate_independent,
+            'time_to_exact': time_to_exact,
+            'time_to_ei': time_to_ei,
+            'time_to_next_log_slot': time_to_next_log_slot,
+        }
+    
+    except CompletionRate.DoesNotExist:
+        return {"error": "Data not available"}
 
-    for rate in completion_rates:
-        # Determine the completion rate based on user type (main or iron)
-        completions_per_hour = rate.completions_per_hour_main
-        if request.GET.get('iron', 'false').lower() == 'true':
-            completions_per_hour = rate.completions_per_hour_iron
+def calculate_all_completion_times(request):
+    is_iron = request.GET.get("is_iron", "false").lower() == "true"
+    completed_items = request.GET.getlist("completed_items")  # Get list of completed items from query params
 
-        # Skip activities with zero completions per hour to avoid division by zero
-        if completions_per_hour == 0:
-            continue
+    user_data = {'completed_items': [int(item) for item in completed_items]}  # Convert to integers
 
-        # Calculate base time to complete
-        base_time = 1 / completions_per_hour
-        extra_time = rate.extra_time_to_first_completion or 0
-        total_time = base_time + extra_time
+    completion_times = []
+    activities = CompletionRate.objects.values_list('activity_index', flat=True).distinct()
 
-        # Filter only the items that are not yet obtained and are active
-        incomplete_items = [
-            item for item in rate.items.all()
-            if item.item_id not in obtained_item_ids and item.active
-        ]
+    for activity_index in activities:
+        completion_data = calculate_completion_data(activity_index, is_iron, user_data)
+        if "error" not in completion_data:
+            completion_times.append(completion_data)
 
-        # Skip activities that are already fully completed
-        if not incomplete_items:
-            continue
+    return JsonResponse({'status': 'success', 'data': completion_times})
 
-        # Compile each activity’s completion data
-        completion_data.append({
-            'activity_name': rate.activity_name,
-            'total_time': total_time,
-            'notes': rate.notes,
-            'incomplete_items': [
-                {
-                    'item_name': item.item_name,
-                    'drop_rate_attempts': item.drop_rate_attempts,
-                    'time_to_acquire': item.drop_rate_attempts / completions_per_hour
-                }
-                for item in incomplete_items
-            ]
+def activity_map_status(request):
+    # Assuming user data is fetched dynamically from a previous function, e.g., through an uploaded JSON file
+    user_data = {'completed_items': []}  # Initialize empty list for completed items
+
+    # Check if there's any user data available
+    if request.method == 'GET':
+        # You can adjust this logic based on how you fetch the user data
+        # Here, we simulate that data is being fetched from the database or from an earlier upload
+        user_data = {'completed_items': list(CollectionLogItem.objects.filter(is_collected=True).values_list('item__item_id', flat=True))}
+
+    activity_map_items = []
+    activity_maps = ActivityMap.objects.all()
+
+    for item in activity_maps:
+        is_completed = item.item_id in user_data['completed_items']
+        requires_previous = item.requires_previous
+        previous_item_completed = (item.sequence - 1) in user_data['completed_items'] if item.sequence > 0 else True  # Check if previous item (by sequence) is completed
+
+        # Determine active status
+        is_active = not is_completed and (previous_item_completed or not requires_previous)
+
+        activity_map_items.append({
+            'activity_name': item.activity_name,
+            'item_name': item.item_name,
+            'completed': is_completed,
+            'requires_previous': requires_previous,
+            'active': is_active,
         })
 
-    # Sort activities by the shortest total time to complete
-    sorted_data = sorted(completion_data, key=lambda x: x['total_time'])
-
-    return JsonResponse({'status': 'success', 'data': sorted_data})
+    return JsonResponse({'status': 'success', 'data': activity_map_items})

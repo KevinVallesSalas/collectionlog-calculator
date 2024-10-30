@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import FileUpload from './components/FileUpload';
 import CollectionLog from './components/CollectionLog';
 import CompletionTime from './components/CompletionTime';
+import ActivityMapStatus from './components/ActivityMapStatus'; // Import the new component
 
 function App() {
   const [activeTab, setActiveTab] = useState('upload'); // default to the Upload tab
@@ -20,6 +21,8 @@ function App() {
         return <CollectionLog refreshLog={refreshLog} />;
       case 'completion':
         return <CompletionTime refreshLog={refreshLog} />;
+      case 'activity-map': // New case for ActivityMapStatus
+        return <ActivityMapStatus />;
       default:
         return <FileUpload onUploadComplete={handleUploadComplete} />;
     }
@@ -39,6 +42,9 @@ function App() {
         <button onClick={() => setActiveTab('completion')} className={activeTab === 'completion' ? 'active' : ''}>
           Completion Time
         </button>
+        <button onClick={() => setActiveTab('activity-map')} className={activeTab === 'activity-map' ? 'active' : ''}>
+          Activity Map Status
+        </button> {/* New button for ActivityMapStatus */}
       </nav>
       
       {/* Tab Content */}

@@ -1,9 +1,10 @@
 from django.urls import path
-from .views import upload_json, get_collection_log, fetch_user_data, calculate_completion_rates
+from . import views
 
 urlpatterns = [
-    path('upload/', upload_json, name='upload_json'),
-    path('collection-log/', get_collection_log, name='get_collection_log'),
-    path('fetch-user/', fetch_user_data, name='fetch_user_data'),
-    path('calculate-completion-times/', calculate_completion_rates, name='calculate_completion_times'),  # Ensure the correct path here
+    path('upload-json/', views.upload_json, name='upload_json'),
+    path('fetch-user/', views.fetch_user_data, name='fetch_user_data'),
+    path('get-collection-log/', views.get_collection_log, name='get_collection_log'),
+    path('calculate-completion-times/', views.calculate_all_completion_times, name='calculate_completion_times'),
+    path('activity-map-status/', views.activity_map_status, name='activity_map_status'),
 ]
