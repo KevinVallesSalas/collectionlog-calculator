@@ -13,7 +13,7 @@ function FileUpload({ onUploadComplete }) {
     const formData = new FormData();
     formData.append('file', selectedFile);
 
-    fetch('http://127.0.0.1:8000/log_importer/upload/', {
+    fetch('http://127.0.0.1:8000/log_importer/upload_json/', {
       method: 'POST',
       body: formData,
     })

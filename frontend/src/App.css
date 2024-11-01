@@ -47,3 +47,26 @@ nav button.active {
   color: white;
 }
 
+.table-container {
+  max-height: 400px; /* Adjust this value as needed */
+  overflow-y: auto;  /* Enables vertical scrolling */
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse; /* Optional: Makes the table borders collapse into a single border */
+}
+
+th, td {
+  padding: 10px;
+  text-align: left;
+  border: 1px solid #ddd; /* Optional: Adds a border to the table cells */
+}
+
+th {
+  background-color: #f2f2f2; /* Optional: Sets a background color for the header */
+  position: sticky;
+  top: 0; /* Position the header at the top */
+  z-index: 1; /* Ensures the header is above other content */
+}
+

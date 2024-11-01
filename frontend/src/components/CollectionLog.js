@@ -9,8 +9,8 @@ function CollectionLog() {
   const [uniqueCollectedItems, setUniqueCollectedItems] = useState(0);
 
   useEffect(() => {
-    // Load data from localStorage
-    const savedData = JSON.parse(localStorage.getItem('collectionLogData'));
+    // Load data from localStorage for collection log
+    const savedData = JSON.parse(localStorage.getItem('collectionLogData')); // Ensure this is correctly set during upload
 
     if (savedData) {
       setItems(savedData);

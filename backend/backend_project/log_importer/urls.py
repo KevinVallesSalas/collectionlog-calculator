@@ -2,7 +2,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('upload-json/', views.upload_json, name='upload_json'),
+    path('upload_json/', views.upload_json, name='upload_json'),
     path('fetch-user/', views.fetch_user_data, name='fetch_user_data'),
     path('get-collection-log/', views.get_collection_log, name='get_collection_log'),
     path('calculate-completion-times/', views.calculate_all_completion_times, name='calculate_completion_times'),
