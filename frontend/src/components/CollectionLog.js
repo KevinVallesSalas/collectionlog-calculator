@@ -1,79 +1,99 @@
 import React, { useState, useEffect } from 'react';
 
 function CollectionLog() {
-  const [items, setItems] = useState([]);
-  const [displayUnique, setDisplayUnique] = useState(false);
-  const [totalItems, setTotalItems] = useState(0);
-  const [collectedItems, setCollectedItems] = useState(0);
-  const [uniqueItems, setUniqueItems] = useState(0);
-  const [uniqueCollectedItems, setUniqueCollectedItems] = useState(0);
+  const [logData, setLogData] = useState(null);
+  const [groupedItems, setGroupedItems] = useState({});
+  const [activeSection, setActiveSection] = useState("Bosses"); // Default section
 
   useEffect(() => {
-    // Load data from localStorage for collection log
-    const savedData = JSON.parse(localStorage.getItem('collectionLogData')); // Ensure this is correctly set during upload
+    // Load structured data from localStorage
+    const savedData = JSON.parse(localStorage.getItem('collectionLogData'));
 
     if (savedData) {
-      setItems(savedData);
+      setLogData(savedData);
 
-      // Calculate total and collected items
-      const total = savedData.length;
-      const collected = savedData.filter(item => item.obtained).length;
+      // Ensure sections exist
+      const sections = savedData.sections || {
+        "Bosses": {},
+        "Raids": {},
+        "Clues": {},
+        "Minigames": {},
+        "Other": {}
+      };
 
-      // Calculate unique and unique collected items
-      const uniqueNames = new Set(savedData.map(item => item.name));
-      const uniqueCount = uniqueNames.size;
-      const uniqueCollectedCount = new Set(
-        savedData.filter(item => item.obtained).map(item => item.name)
-      ).size;
-
-      setTotalItems(total);
-      setCollectedItems(collected);
-      setUniqueItems(uniqueCount);
-      setUniqueCollectedItems(uniqueCollectedCount);
+      setGroupedItems(sections);
     }
   }, []);
 
   const clearStorage = () => {
     localStorage.removeItem('collectionLogData');
-    setItems([]);
-    setTotalItems(0);
-    setCollectedItems(0);
-    setUniqueItems(0);
-    setUniqueCollectedItems(0);
+    setLogData(null);
+    setGroupedItems({});
+    setActiveSection("Bosses"); // Reset to default section
   };
 
   return (
     <div>
       <h1>Collection Log</h1>
-      <button onClick={() => setDisplayUnique(!displayUnique)}>
-        Toggle to {displayUnique ? 'Total Slots' : 'Unique Slots'}
-      </button>
-      
-      {displayUnique ? (
+
+      {logData ? (
         <div>
-          <p>Unique Log Slots: {uniqueItems}</p>
-          <p>Unique Collected Slots: {uniqueCollectedItems}</p>
+          <p><strong>Username:</strong> {logData.username}</p>
+          <p><strong>Account Type:</strong> {logData.accountType}</p>
+          <p><strong>Unique Slots Obtained:</strong> {logData.uniqueObtained} / {logData.uniqueItems}</p>
+
+          {/* Section Selection Buttons */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            {Object.keys(groupedItems).map((section) => (
+              <button
+                key={section}
+                onClick={() => setActiveSection(section)}
+                style={{
+                  padding: '10px',
+                  cursor: 'pointer',
+                  backgroundColor: activeSection === section ? '#007bff' : '#ddd',
+                  color: activeSection === section ? 'white' : 'black',
+                  border: 'none',
+                  borderRadius: '5px'
+                }}
+              >
+                {section}
+              </button>
+            ))}
+          </div>
+
+          {/* Display Selected Section */}
+          <div>
+            <h2>{activeSection}</h2>
+            {Object.keys(groupedItems[activeSection] || {}).length === 0 ? (
+              <p>No items found in this category.</p>
+            ) : (
+              Object.entries(groupedItems[activeSection]).map(([subsection, items]) => (
+                <div key={subsection}>
+                  <h3>{subsection}</h3>
+                  {items.length > 0 ? (
+                    <ul>
+                      {items.map((item, index) => (
+                        <li key={index}>
+                          {item.name} - <strong>{item.obtained ? '✅ Obtained' : '❌ Not Obtained'}</strong>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>No items collected yet.</p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
         </div>
       ) : (
-        <div>
-          <p>Total Log Slots: {totalItems}</p>
-          <p>Total Collected Slots: {collectedItems}</p>
-        </div>
+        <p>No data found. Please upload a collection log.</p>
       )}
 
-      <ul>
-        {items.length > 0 ? (
-          items.map((item, index) => (
-            <li key={`${item.id}-${index}`}>
-              {item.name} - {item.obtained ? 'Collected' : 'Not Collected'}
-            </li>
-          ))
-        ) : (
-          <p>No items found. Upload a new collection log.</p>
-        )}
-      </ul>
-
-      <button onClick={clearStorage}>Clear Collection Log</button>
+      <button onClick={clearStorage} style={{ marginTop: '20px', padding: '10px', backgroundColor: '#ff4d4d', color: 'white', border: 'none', borderRadius: '5px' }}>
+        Clear Collection Log
+      </button>
     </div>
   );
 }

@@ -10,10 +10,15 @@ function FileUpload({ onUploadComplete }) {
   };
 
   const handleFileUpload = () => {
+    if (!selectedFile) {
+      setUploadStatus('Please select a file before uploading.');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('file', selectedFile);
 
-    fetch('http://127.0.0.1:8000/log_importer/upload_json/', {
+    fetch('http://127.0.0.1:8000/log_importer/collection-log/', {
       method: 'POST',
       body: formData,
     })
@@ -33,7 +38,12 @@ function FileUpload({ onUploadComplete }) {
   };
 
   const handleFetchUserData = () => {
-    fetch('http://127.0.0.1:8000/log_importer/fetch-user/', {
+    if (!username.trim()) {
+      setUploadStatus('Please enter a username.');
+      return;
+    }
+
+    fetch('http://127.0.0.1:8000/log_importer/collection-log/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username }),
@@ -55,9 +65,11 @@ function FileUpload({ onUploadComplete }) {
 
   return (
     <div>
+      <h2>Upload Collection Log</h2>
       <input type="file" onChange={handleFileChange} />
       <button onClick={handleFileUpload}>Upload File</button>
 
+      <h2>Fetch User Data</h2>
       <input
         type="text"
         placeholder="Enter username"

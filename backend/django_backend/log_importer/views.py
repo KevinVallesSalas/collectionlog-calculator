@@ -12,75 +12,98 @@ from .calculations import (
 )
 
 @csrf_exempt
-def upload_json(request):
+def handle_collection_log(request):
     if request.method == 'POST':
         try:
-            json_file = request.FILES['file']
-            data = json.load(json_file)
-            tabs_data = data.get('tabs', {})
-            processed_data = []
+            if 'file' in request.FILES:
+                # Handle file upload
+                json_file = request.FILES['file']
+                data = json.load(json_file)
 
-            for tab_name, entries in tabs_data.items():
-                for entry_name, entry_data in entries.items():
-                    for item_data in entry_data.get('items', []):
-                        processed_data.append({
-                            'id': item_data['id'],
-                            'name': item_data['name'],
-                            'obtained': item_data['obtained']
-                        })
+                # Set default values for manual uploads
+                username = "Manual Upload"
+                account_type = "Unknown"
+            else:
+                # Handle API fetch
+                request_data = json.loads(request.body)
+                username = request_data.get('username')
 
-                    for kill_data in entry_data.get('killCounts', []):
-                        processed_data.append({
-                            'name': kill_data['name'],
-                            'amount': kill_data['amount']
-                        })
+                if not username:
+                    return JsonResponse({'status': 'error', 'message': 'Username is required'})
 
-            return JsonResponse({'status': 'success', 'data': processed_data})
+                response = requests.get(f"https://api.collectionlog.net/collectionlog/user/{username}")
+                if response.status_code != 200:
+                    return JsonResponse({'status': 'error', 'message': 'Failed to fetch data from collectionlog.net'})
+
+                data = response.json().get('collectionLog', {})
+                account_type = data.get("accountType", "Unknown")
+
+            # Extract relevant data
+            unique_obtained = data.get("uniqueObtained", 0)
+            unique_items = data.get("uniqueItems", 0)
+            tabs_data = data.get("tabs", {})
+
+            # Define core sections
+            sections = {
+                "Bosses": {},
+                "Raids": {},
+                "Clues": {},
+                "Minigames": {},
+                "Other": {}
+            }
+
+            # Predefined Clue order
+            clue_order = [
+                "Beginner Treasure Trails",
+                "Easy Treasure Trails",
+                "Medium Treasure Trails",
+                "Hard Treasure Trails",
+                "Elite Treasure Trails",
+                "Master Treasure Trails",
+                "Hard Treasure Trails (Rare)",
+                "Elite Treasure Trails (Rare)",
+                "Master Treasure Trails (Rare)",
+                "Shared Treasure Trail Rewards"
+            ]
+
+            # Process all tabs into sections
+            for tab_name, tab_entries in tabs_data.items():
+                section = sections.get(tab_name, sections["Other"])
+
+                for entry_name, entry_data in tab_entries.items():
+                    if entry_name not in section:
+                        section[entry_name] = []
+
+                    # Handle different formats (API has "items", manual upload may have direct lists)
+                    if isinstance(entry_data, dict) and "items" in entry_data:
+                        section[entry_name].extend(entry_data["items"])
+                    elif isinstance(entry_data, list):
+                        section[entry_name].extend(entry_data)
+
+            # Sort sections: Alphabetical except Clues
+            sorted_sections = {}
+            for section, entries in sections.items():
+                if section == "Clues":
+                    sorted_clues = {clue: sections["Clues"].get(clue, []) for clue in clue_order if clue in sections["Clues"]}
+                    unknown_clues = {k: v for k, v in sections["Clues"].items() if k not in clue_order}
+                    sorted_clues.update(unknown_clues)
+                    sorted_sections["Clues"] = sorted_clues
+                else:
+                    sorted_sections[section] = dict(sorted(entries.items()))
+
+            # Final structured data
+            final_data = {
+                "username": username,
+                "accountType": account_type,
+                "uniqueObtained": unique_obtained,
+                "uniqueItems": unique_items,
+                "sections": sorted_sections
+            }
+
+            return JsonResponse({'status': 'success', 'data': final_data})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
-    return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
 
-@csrf_exempt
-def fetch_user_data(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            username = data.get('username')
-
-            if not username:
-                return JsonResponse({'status': 'error', 'message': 'Username is required'})
-
-            response = requests.get(f"https://api.collectionlog.net/collectionlog/user/{username}")
-            if response.status_code != 200:
-                return JsonResponse({'status': 'error', 'message': 'Failed to fetch data from collectionlog.net'})
-
-            collection_log_data = response.json().get('collectionLog', {}).get('tabs', {})
-            processed_data = []
-            user_data = {'completed_items': []}  # Initialize as a list
-
-            for tab_name, entries in collection_log_data.items():
-                for entry_name, entry_data in entries.items():
-                    for item in entry_data.get('items', []):
-                        processed_data.append({
-                            'id': item['id'],
-                            'name': item['name'],
-                            'obtained': item['obtained']
-                        })
-                        if item['obtained']:
-                            user_data['completed_items'].append(item['id'])  # Append to the list
-
-                    for kill_count in entry_data.get('killCount', []):
-                        processed_data.append({
-                            'name': kill_count['name'],
-                            'amount': kill_count['amount']
-                        })
-
-            # Store user data in the session
-            request.session['user_data'] = user_data
-
-            return JsonResponse({'status': 'success', 'data': processed_data})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
 
 
