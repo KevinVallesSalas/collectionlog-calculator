@@ -29,21 +29,31 @@ function ActivityMapStatus() {
   const loadCompletedItems = () => {
     const savedData = JSON.parse(localStorage.getItem('collectionLogData'));
     if (savedData) {
-      const completed = savedData
-        .filter(item => item.obtained)
-        .map(item => item.id);
+      const completed = [];
+
+      // Extract completed item IDs from all sections
+      Object.values(savedData.sections || {}).forEach(section => {
+        Object.values(section).forEach(entry => {
+          entry.forEach(item => {
+            if (item.obtained) {
+              completed.push(item.id);
+            }
+          });
+        });
+      });
+
       setCompletedItems(completed);
     }
   };
 
-  const calculateActiveStatus = (item, index) => {
+  const calculateActiveStatus = (item) => {
     const isCompleted = completedItems.includes(item.item_id);
     const requiresPrevious = item.requires_previous;
 
-    // Check the previous item's completion status if it's not the first item
-    const previousItemCompleted = index > 0 && completedItems.includes(activityMapItems[index - 1].item_id);
+    // Find previous item based on sequence number
+    const previousItem = activityMapItems.find(i => i.activity_index === item.activity_index - 1);
+    const previousItemCompleted = previousItem ? completedItems.includes(previousItem.item_id) : true;
 
-    // Implement the logic as per the spreadsheet formula
     return !isCompleted && (previousItemCompleted || !requiresPrevious);
   };
 
@@ -86,7 +96,7 @@ function ActivityMapStatus() {
                   <td>{item.item_name}</td>
                   <td>{completedItems.includes(item.item_id) ? 'Yes' : 'No'}</td>
                   <td>{item.requires_previous ? 'Yes' : 'No'}</td>
-                  <td>{calculateActiveStatus(item, index) ? 'Yes' : 'No'}</td>
+                  <td>{calculateActiveStatus(item) ? 'Yes' : 'No'}</td>
                   <td>{item.exact ? 'Yes' : 'No'}</td>
                   <td>{item.independent ? 'Yes' : 'No'}</td>
                   <td>{item.drop_rate_attempts}</td>

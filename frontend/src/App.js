@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import FileUpload from './components/FileUpload';
+import FetchCollectionlogData from './components/FetchCollectionLogData';
 import CollectionLog from './components/CollectionLog';
 import CompletionTime from './components/CompletionTime';
 import ActivityMapStatus from './components/ActivityMapStatus'; // Import the new component
@@ -16,7 +16,7 @@ function App() {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'upload':
-        return <FileUpload onUploadComplete={handleUploadComplete} />;
+        return <FetchCollectionlogData onUploadComplete={handleUploadComplete} />;
       case 'collection':
         return <CollectionLog refreshLog={refreshLog} />;
       case 'completion':
@@ -24,7 +24,7 @@ function App() {
       case 'activity-map': // New case for ActivityMapStatus
         return <ActivityMapStatus />;
       default:
-        return <FileUpload onUploadComplete={handleUploadComplete} />;
+        return <FetchCollectionlogData onUploadComplete={handleUploadComplete} />;
     }
   };
 
