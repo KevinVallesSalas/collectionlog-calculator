@@ -2,15 +2,14 @@ import React, { useState } from 'react';
 import FetchCollectionlogData from './components/FetchCollectionLogData';
 import CollectionLog from './components/CollectionLog';
 import CompletionTime from './components/CompletionTime';
-import ActivityMapStatus from './components/ActivityMapStatus'; // Import the new component
 
 function App() {
-  const [activeTab, setActiveTab] = useState('upload'); // default to the Upload tab
+  const [activeTab, setActiveTab] = useState('upload'); // Default to Upload tab
   const [refreshLog, setRefreshLog] = useState(false);
 
-  // Function to trigger refresh of CollectionLog and CompletionTime on upload complete
+  // Function to trigger refresh of CollectionLog on upload complete
   const handleUploadComplete = () => {
-    setRefreshLog(!refreshLog); // Toggle to force re-fetching or re-rendering of data
+    setRefreshLog(!refreshLog); // Toggle state to refresh collection log data
   };
 
   const renderTabContent = () => {
@@ -20,9 +19,7 @@ function App() {
       case 'collection':
         return <CollectionLog refreshLog={refreshLog} />;
       case 'completion':
-        return <CompletionTime refreshLog={refreshLog} />;
-      case 'activity-map': // New case for ActivityMapStatus
-        return <ActivityMapStatus />;
+        return <CompletionTime />; // ✅ No need for refreshLog here
       default:
         return <FetchCollectionlogData onUploadComplete={handleUploadComplete} />;
     }
@@ -42,9 +39,6 @@ function App() {
         <button onClick={() => setActiveTab('completion')} className={activeTab === 'completion' ? 'active' : ''}>
           Completion Time
         </button>
-        <button onClick={() => setActiveTab('activity-map')} className={activeTab === 'activity-map' ? 'active' : ''}>
-          Activity Map Status
-        </button> {/* New button for ActivityMapStatus */}
       </nav>
       
       {/* Tab Content */}

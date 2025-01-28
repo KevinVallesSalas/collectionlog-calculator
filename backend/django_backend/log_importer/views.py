@@ -132,9 +132,6 @@ def calculate_completion_data(activity_index, is_iron=False, user_data=None):
         time_to_ei = safe_float_conversion(calculate_time_to_ei(activity_index, completions_per_hour, user_data))
         time_to_next_log_slot = safe_float_conversion(calculate_time_to_next_log_slot(activity_index, completions_per_hour, user_data))
 
-        # Debugging output to track values
-        print(f"DEBUG: Activity {activity_index} -> time_to_exact={time_to_exact}, time_to_ei={time_to_ei}, time_to_next_log_slot={time_to_next_log_slot}")
-
         # Get the fastest time
         time_values = {
             'exact': time_to_exact,
@@ -199,40 +196,3 @@ def safe_float_conversion(value):
         return float(value)
     except (ValueError, TypeError):
         return None  # Return None to prevent invalid values in calculations
-
-
-def activity_map_status(request):
-    """ Retrieves activity map status, checking if items are completed and active. """
-    user_data = request.session.get('user_data', {'completed_items': []})
-    completed_items = user_data.get('completed_items', [])
-
-    activity_map_items = []
-    activity_maps = ActivityMap.objects.all()
-
-    for item in activity_maps:
-        is_completed = item.item_id in completed_items
-        requires_previous = item.requires_previous
-        previous_item_completed = (item.sequence - 1) in completed_items if item.sequence > 0 else True
-
-        is_active = not is_completed and (previous_item_completed or not requires_previous)
-
-        activity_map_items.append({
-            'activity_name': item.activity_name,
-            'item_name': item.item_name,
-            'completed': is_completed,
-            'requires_previous': requires_previous,
-            'active': is_active,
-            'activity_index': item.completion_rate.activity_index,
-            'completions_per_hour': item.completions_per_hour,
-            'additional_time_to_first_completion': item.additional_time_to_first_completion,
-            'item_id': item.item_id,
-            'exact': item.exact,
-            'independent': item.independent,
-            'drop_rate_attempts': item.drop_rate_attempts,
-            'e_and_i': item.e_and_i,
-            'e_only': item.e_only,
-            'i_only': item.i_only,
-            'neither_inverse': item.neither_inverse,
-        })
-
-    return JsonResponse({'status': 'success', 'data': activity_map_items})

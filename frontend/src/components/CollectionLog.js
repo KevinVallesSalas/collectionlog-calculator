@@ -26,7 +26,8 @@ function CollectionLog() {
   }, []);
 
   const clearStorage = () => {
-    localStorage.removeItem('collectionLogData');
+    localStorage.removeItem('collectionLogData');  // ✅ Remove collection log data
+    localStorage.removeItem('completionTimes');   // ✅ Remove calculated completion times
     setLogData(null);
     setGroupedItems({});
     setActiveSection("Bosses"); // Reset to default section
@@ -91,7 +92,9 @@ function CollectionLog() {
         <p>No data found. Please upload a collection log.</p>
       )}
 
-      <button onClick={clearStorage} style={{ marginTop: '20px', padding: '10px', backgroundColor: '#ff4d4d', color: 'white', border: 'none', borderRadius: '5px' }}>
+      <button 
+        onClick={clearStorage} 
+        style={{ marginTop: '20px', padding: '10px', backgroundColor: '#ff4d4d', color: 'white', border: 'none', borderRadius: '5px' }}>
         Clear Collection Log
       </button>
     </div>
