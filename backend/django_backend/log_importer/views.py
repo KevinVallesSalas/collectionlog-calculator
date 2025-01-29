@@ -2,14 +2,7 @@ import requests
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
-from .models import Item, Tab, LogEntry, KillCount, CompletionRate, ActivityMap, CollectionLogItem
-from .calculations import (
-    calculate_effective_droprate_neither,
-    calculate_effective_droprate_independent,
-    calculate_time_to_exact,
-    calculate_time_to_ei,
-    calculate_time_to_next_log_slot,
-)
+from .models import Item, CompletionRate, ActivityMap
 
 @csrf_exempt
 def handle_collection_log(request):
@@ -115,84 +108,35 @@ def get_collection_log(request):
     return JsonResponse({'status': 'success', 'data': data})
 
 
-def calculate_completion_data(activity_index, is_iron=False, user_data=None):
-    """ Helper function to calculate completion data for a given activity index. """
-    try:
-        completion_rate = CompletionRate.objects.get(activity_index=activity_index)
-        completions_per_hour = (
-            completion_rate.completions_per_hour_iron if is_iron else completion_rate.completions_per_hour_main
-        )
-
-        # Calculate drop rates
-        droprate_neither = calculate_effective_droprate_neither(activity_index, user_data)
-        droprate_independent = calculate_effective_droprate_independent(activity_index, user_data)
-
-        # Retrieve time values
-        time_to_exact = safe_float_conversion(calculate_time_to_exact(activity_index, completions_per_hour, user_data))
-        time_to_ei = safe_float_conversion(calculate_time_to_ei(activity_index, completions_per_hour, user_data))
-        time_to_next_log_slot = safe_float_conversion(calculate_time_to_next_log_slot(activity_index, completions_per_hour, user_data))
-
-        # Get the fastest time
-        time_values = {
-            'exact': time_to_exact,
-            'ei': time_to_ei,
-            'next_log_slot': time_to_next_log_slot
-        }
-        fastest_time = min(filter(lambda x: isinstance(x, (int, float)) and x > 0, time_values.values()), default=None)
-
-        # Exclude completed items from ActivityMap
-        completed_items = user_data.get('completed_items', [])
-        fastest_item_name = None
-
-        if fastest_time:
-            fastest_item = ActivityMap.objects.filter(
-                completion_rate=completion_rate
-            ).exclude(item_id__in=completed_items).order_by('drop_rate_attempts').first()  # ✅ Exclude completed items
-
-            if fastest_item:
-                fastest_item_name = fastest_item.item_name  # ✅ Get the actual next uncompleted item
-
-        return {
-            'activity_index': activity_index,
-            'activity_name': completion_rate.activity_name,
-            'fastest_log_slot': fastest_time,  # Time in days
-            'fastest_slot_name': fastest_item_name or "Unknown",  # ✅ Now returning the correct next uncompleted item
-            'droprate_neither': droprate_neither,
-            'droprate_independent': droprate_independent,
-            'time_to_exact': time_to_exact,
-            'time_to_ei': time_to_ei,
-            'time_to_next_log_slot': time_to_next_log_slot,
-        }
-
-    except CompletionRate.DoesNotExist:
-        return {"error": "Data not available"}
-
-
 @csrf_exempt
-def calculate_all_completion_times(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        is_iron = data.get("is_iron", False)
-        completed_items = data.get("completed_items", [])
+def get_activities_data(request):
+    """
+    Returns raw data for each activity. 
+    The frontend can then do its own calculations.
+    """
+    if request.method == 'GET':
+        activities = CompletionRate.objects.all()
+        data = []
 
-        user_data = {'completed_items': [int(item) for item in completed_items]}  # Convert to integers
+        for activity in activities:
+            maps_qs = ActivityMap.objects.filter(completion_rate=activity)
+            maps_data = []
+            for m in maps_qs:
+                maps_data.append({
+                    "item_id": m.item_id,
+                    "item_name": m.item_name,
+                    "drop_rate_attempts": m.drop_rate_attempts,
+                    "neither_inverse": m.neither_inverse,
+                })
 
-        completion_times = []
-        activities = CompletionRate.objects.values_list('activity_index', flat=True).distinct()
+            data.append({
+                "activity_index": activity.activity_index,
+                "activity_name": activity.activity_name,
+                "completions_per_hour_main": activity.completions_per_hour_main,
+                "completions_per_hour_iron": activity.completions_per_hour_iron,
+                "maps": maps_data
+            })
 
-        for activity_index in activities:
-            completion_data = calculate_completion_data(activity_index, is_iron, user_data)
-            if "error" not in completion_data:
-                completion_times.append(completion_data)
-
-        return JsonResponse({'status': 'success', 'data': completion_times})
-
-    return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
-
-
-def safe_float_conversion(value):
-    """ Converts a value to float; returns None if conversion fails. """
-    try:
-        return float(value)
-    except (ValueError, TypeError):
-        return None  # Return None to prevent invalid values in calculations
+        return JsonResponse({"status": "success", "data": data}, safe=False)
+    
+    return JsonResponse({"status": "error", "message": "Invalid method"}, status=405)
