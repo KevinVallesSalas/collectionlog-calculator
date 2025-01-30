@@ -1,6 +1,17 @@
 /*******************************************************
- * calculations.js (Zero attempts => "no data" logic)
+ * calculations.js (Includes Extra Time in Calculation)
  *******************************************************/
+
+/**
+ * Ensures userData is always an object with completed_items as an array.
+ */
+function validateUserData(userData) {
+  if (!userData || !Array.isArray(userData.completed_items)) {
+    console.warn("Warning: userData is undefined or invalid. Defaulting to empty array.");
+    return { completed_items: [] };
+  }
+  return userData;
+}
 
 /**
  * Calculates the effective droprate for items not completed by the user,
@@ -8,7 +19,8 @@
  * Returns 'n/a' if there are no uncompleted items or if the sum is 0.
  */
 export function calculateEffectiveDroprateNeither(items, userData) {
-  // Sum up neither_inverse only for uncompleted items that have a valid (>0) neither_inverse
+  userData = validateUserData(userData); // Ensure valid userData
+
   const neitherSum = items
     .filter((i) => {
       const isUncompleted = !userData.completed_items.includes(i.id);
@@ -17,7 +29,6 @@ export function calculateEffectiveDroprateNeither(items, userData) {
     })
     .reduce((acc, i) => acc + i.neither_inverse, 0);
 
-  // If no valid items or sum=0, return 'n/a'
   return neitherSum === 0 ? 'n/a' : 1 / neitherSum;
 }
 
@@ -27,6 +38,8 @@ export function calculateEffectiveDroprateNeither(items, userData) {
  * Returns 'n/a' if there are no valid uncompleted items.
  */
 export function calculateEffectiveDroprateIndependent(items, userData) {
+  userData = validateUserData(userData); // Ensure valid userData
+
   const attempts = items
     .filter((i) => {
       const isUncompleted = !userData.completed_items.includes(i.id);
@@ -44,6 +57,8 @@ export function calculateEffectiveDroprateIndependent(items, userData) {
  * Returns '' if droprate is 'n/a' or completionsPerHour is 0.
  */
 export function calculateTimeToExact(items, completionsPerHour, userData) {
+  userData = validateUserData(userData); // Ensure valid userData
+
   const droprate = calculateEffectiveDroprateNeither(items, userData);
   if (droprate === 'n/a' || completionsPerHour === 0) return '';
   return droprate / completionsPerHour;
@@ -54,22 +69,23 @@ export function calculateTimeToExact(items, completionsPerHour, userData) {
  * Returns '' if droprate is 'n/a' or completionsPerHour is 0.
  */
 export function calculateTimeToEi(items, completionsPerHour, userData) {
+  userData = validateUserData(userData); // Ensure valid userData
+
   const droprate = calculateEffectiveDroprateIndependent(items, userData);
   if (droprate === 'n/a' || completionsPerHour === 0) return '';
   return droprate / completionsPerHour;
 }
 
 /**
- * Chooses the smallest *positive* value among the droprates/times
- * and returns that value divided by 24 (to convert from hours to days).
- * Returns:
- *  - 'No available data' if there are no numeric (>=0) values
- *  - otherwise, the min time (hours) / 24 => days
- *
- * NOTE: we removed "if any droprate/time is 0 => 'Done!'" 
- * so items with 0 attempts are now simply ignored (treated as 'n/a').
+ * Calculates the time to next log slot, incorporating extra time.
+ * - Includes extraTimeToFirstCompletion in calculations.
+ * - Returns:
+ *   - 'No available data' if there are no numeric (>=0) values
+ *   - Otherwise, the minimum time (in hours) divided by 24 (days).
  */
-export function calculateTimeToNextLogSlot(items, completionsPerHour, userData) {
+export function calculateTimeToNextLogSlot(items, completionsPerHour, extraTimeToFirstCompletion, userData) {
+  userData = validateUserData(userData); // Ensure valid userData
+
   const valA = calculateEffectiveDroprateNeither(items, userData);
   const valB = calculateEffectiveDroprateIndependent(items, userData);
   const valC = calculateTimeToExact(items, completionsPerHour, userData);
@@ -83,12 +99,12 @@ export function calculateTimeToNextLogSlot(items, completionsPerHour, userData) 
     }
   });
 
-  // If we have no numeric (valid) values, return "No available data"
   if (numericValues.length === 0) {
     return 'No available data';
   }
 
-  // Otherwise, take the minimum (in hours) and convert to days by dividing by 24
   const minTime = Math.min(...numericValues);
-  return minTime / 24;
+  
+  // ✅ Include extraTimeToFirstCompletion in the final calculation
+  return (minTime + (extraTimeToFirstCompletion ?? 0)) / 24;
 }

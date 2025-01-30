@@ -1,34 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { calculateTimeToNextLogSlot } from '../utils/calculations';
 
-/**
- * Helper function to find the "Next Fastest Item" name
- * based on uncompleted items' drop_rate_attempts.
- */
 function findNextFastestItemName(items, userData) {
-  const uncompleted = items.filter((i) => !userData.completed_items.includes(i.id));
+  const uncompleted = items.filter((i) => userData?.completed_items && !userData.completed_items.includes(i.id));
   if (uncompleted.length === 0) {
     return '-';
   }
-  // Sort ascending by drop_rate_attempts
   uncompleted.sort((a, b) => a.drop_rate_attempts - b.drop_rate_attempts);
   return uncompleted[0].name || '-';
 }
 
-function CompletionTime() {
+function CompletionTime({ userCompletionRates }) {
   const [rawActivities, setRawActivities] = useState([]);
   const [activities, setActivities] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [fetchingData, setFetchingData] = useState(true);
-  const [isIron, setIsIron] = useState(false);
+  const [userData, setUserData] = useState({ completed_items: [] });
+
+  // ✅ Load mode & manual toggle flag from localStorage
+  const [isIron, setIsIron] = useState(() => {
+    return JSON.parse(localStorage.getItem('isIron')) ?? false;
+  });
+  const [userToggled, setUserToggled] = useState(() => {
+    return JSON.parse(localStorage.getItem('userToggledMode')) ?? false;
+  });
 
   const [sortConfig, setSortConfig] = useState({ key: 'activity_name', direction: 'asc' });
 
-  // 1) Fetch raw activity data from your Django endpoint
   useEffect(() => {
     async function fetchActivitiesData() {
       try {
-        setFetchingData(true);
         const response = await fetch('http://127.0.0.1:8000/log_importer/get-activities-data/');
         const json = await response.json();
         if (json.status === 'success') {
@@ -36,144 +35,138 @@ function CompletionTime() {
         }
       } catch (error) {
         console.error('Error fetching activities data:', error);
-      } finally {
-        setFetchingData(false);
       }
     }
     fetchActivitiesData();
   }, []);
 
-  // 2) Once rawActivities is loaded, compute final data for each activity
   useEffect(() => {
-    if (rawActivities.length > 0) {
-      const savedLogData = JSON.parse(localStorage.getItem('collectionLogData'));
-      if (!savedLogData || !savedLogData.sections) {
-        setIsLoading(false);
-        return;
-      }
+  const savedLogData = JSON.parse(localStorage.getItem('collectionLogData'));
 
-      // Gather completed item IDs from local data
-      const collectedItems = [];
-      Object.values(savedLogData.sections).forEach((categories) => {
-        Object.values(categories).forEach((items) => {
-          items.forEach((item) => {
-            if (item.obtained) {
-              collectedItems.push(item.id);
-            }
-          });
-        });
-      });
-
-      const userData = { completed_items: collectedItems };
-
-      // Transform item_id -> id, item_name -> name, etc.
-      const activitiesWithUnifiedFields = rawActivities.map((activity) => {
-        const mappedItems = activity.maps.map((m) => ({
-          id: m.item_id,
-          name: m.item_name,
-          drop_rate_attempts: m.drop_rate_attempts,
-          neither_inverse: m.neither_inverse,
-        }));
-        return { ...activity, maps: mappedItems };
-      });
-
-      // Build the final array with time calculations & next item
-      const newActivities = activitiesWithUnifiedFields.map((activity) => {
-        const completionsPerHour = isIron
-          ? activity.completions_per_hour_iron
-          : activity.completions_per_hour_main;
-
-        // If no items at all
-        if (activity.maps.length === 0) {
-          return {
-            activity_name: activity.activity_name,
-            time_to_next_log_slot: 'No available data',
-            fastest_slot_name: '-',
-          };
-        }
-
-        // Check how many items remain uncompleted
-        const uncompleted = activity.maps.filter(
-          (i) => !userData.completed_items.includes(i.id)
-        );
-        if (uncompleted.length === 0) {
-          // Everything is completed
-          return {
-            activity_name: activity.activity_name,
-            time_to_next_log_slot: 'Done!',
-            fastest_slot_name: '-',
-          };
-        }
-
-        // Calculate the time to next slot
-        const nextSlotTime = calculateTimeToNextLogSlot(
-          activity.maps,
-          completionsPerHour,
-          userData
-        );
-        const fastestSlotName = findNextFastestItemName(activity.maps, userData);
-
-        return {
-          activity_name: activity.activity_name,
-          time_to_next_log_slot: nextSlotTime,
-          fastest_slot_name: fastestSlotName,
-        };
-      });
-
-      setActivities(newActivities);
-      setIsLoading(false);
-    } else {
-      if (!fetchingData) {
-        setIsLoading(false);
-      }
-    }
-  }, [rawActivities, isIron, fetchingData]);
-
-  // Toggle Iron Mode
-  const toggleIronMode = () => {
-    setIsIron(!isIron);
-  };
-
- // Sorting logic
-const sortActivities = (key) => {
-  let direction = 'asc';
-  if (sortConfig.key === key && sortConfig.direction === 'asc') {
-    direction = 'desc';
+  if (!savedLogData || !savedLogData.sections) {
+    setUserData({ completed_items: [] });
+    return;
   }
 
-  const sorted = [...activities].sort((a, b) => {
-    let valA = a[key];
-    let valB = b[key];
-
-    if (key === 'time_to_next_log_slot') {
-      // Convert times so that "Done!" => Infinity (goes to bottom in ascending)
-      // Numeric times stay as-is. Anything else is also Infinity.
-      valA =
-        typeof valA === 'number'
-          ? valA
-          : valA === 'Done!'
-          ? Infinity
-          : Infinity; // e.g. 'No available data' => Infinity
-      valB =
-        typeof valB === 'number'
-          ? valB
-          : valB === 'Done!'
-          ? Infinity
-          : Infinity;
-    }
-
-    // Now do normal ascending/descending comparison
-    if (valA > valB) return direction === 'asc' ? 1 : -1;
-    if (valA < valB) return direction === 'asc' ? -1 : 1;
-    return 0;
+  const collectedItems = [];
+  Object.values(savedLogData.sections).forEach((categories) => {
+    Object.values(categories).forEach((items) => {
+      items.forEach((item) => {
+        if (item.obtained) {
+          collectedItems.push(item.id);
+        }
+      });
+    });
   });
 
-  setActivities(sorted);
-  setSortConfig({ key, direction });
-};
+  setUserData({ 
+    completed_items: collectedItems, 
+    accountType: savedLogData.accountType ?? "NORMAL"
+  });
+
+  // ✅ Reset mode only if the user hasn’t manually toggled it
+  if (!userToggled) {
+    const newMode = savedLogData.accountType === "IRONMAN";
+    setIsIron(newMode);
+    localStorage.setItem('isIron', JSON.stringify(newMode));
+    localStorage.setItem('userToggledMode', JSON.stringify(false)); // ✅ Reset manual toggle flag
+  }
+}, [rawActivities, userToggled]); // ✅ Added `userToggled` to dependencies
 
 
-  // Convert numeric day values into HH:MM:SS strings
+  useEffect(() => {
+    if (!userData) return;
+
+    const activitiesWithUnifiedFields = rawActivities.map((activity) => {
+      const mappedItems = activity.maps.map((m) => ({
+        id: m.item_id,
+        name: m.item_name,
+        drop_rate_attempts: m.drop_rate_attempts,
+        neither_inverse: m.neither_inverse,
+      }));
+      return { ...activity, maps: mappedItems };
+    });
+
+    const newActivities = activitiesWithUnifiedFields.map((activity) => {
+      const userRateMain = userCompletionRates[activity.activity_name]?.completions_per_hour_main;
+      const userRateIron = userCompletionRates[activity.activity_name]?.completions_per_hour_iron;
+      const defaultRateMain = activity.completions_per_hour_main ?? 0;
+      const defaultRateIron = activity.completions_per_hour_iron ?? 0;
+
+      const userExtraTime = userCompletionRates[activity.activity_name]?.extra_time_to_first_completion ?? 0;
+      const defaultExtraTime = activity.extra_time_to_first_completion ?? 0;
+
+      const completionsPerHour = isIron
+        ? userRateIron ?? defaultRateIron
+        : userRateMain ?? defaultRateMain;
+
+      const extraTimeToFirstCompletion = isIron
+        ? userExtraTime
+        : defaultExtraTime;
+
+      if (activity.maps.length === 0) {
+        return {
+          activity_name: activity.activity_name,
+          time_to_next_log_slot: 'No available data',
+          fastest_slot_name: '-',
+        };
+      }
+
+      const nextSlotTime = calculateTimeToNextLogSlot(
+        activity.maps,
+        completionsPerHour,
+        extraTimeToFirstCompletion,
+        userData || { completed_items: [] }
+      );
+
+      const fastestSlotName = findNextFastestItemName(activity.maps, userData || { completed_items: [] });
+
+      return {
+        activity_name: activity.activity_name,
+        time_to_next_log_slot: nextSlotTime,
+        fastest_slot_name: fastestSlotName,
+        completions_per_hour: completionsPerHour,
+        extra_time_to_first_completion: extraTimeToFirstCompletion,
+      };
+    });
+
+    setActivities(newActivities);
+  }, [rawActivities, isIron, userData, userCompletionRates]);
+
+  const toggleIronMode = () => {
+    setIsIron((prev) => {
+      const newValue = !prev;
+      localStorage.setItem('isIron', JSON.stringify(newValue));
+      setUserToggled(true); // ✅ Mark that the user manually changed the mode
+      localStorage.setItem('userToggledMode', JSON.stringify(true)); // ✅ Persist manual toggle
+      return newValue;
+    });
+  };
+
+  const sortActivities = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+
+    const sorted = [...activities].sort((a, b) => {
+      let valA = a[key];
+      let valB = b[key];
+
+      if (key === 'time_to_next_log_slot') {
+        valA = typeof valA === 'number' ? valA : valA === 'Done!' ? Infinity : Infinity;
+        valB = typeof valB === 'number' ? valB : valB === 'Done!' ? Infinity : Infinity;
+      }
+
+      if (valA > valB) return direction === 'asc' ? 1 : -1;
+      if (valA < valB) return direction === 'asc' ? -1 : 1;
+      return 0;
+    });
+
+    setActivities(sorted);
+    setSortConfig({ key, direction });
+  };
+
   const formatTimeInHMS = (days) => {
     if (days === 'Done!' || days === 'No available data') {
       return days;
@@ -190,22 +183,14 @@ const sortActivities = (key) => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   };
 
-  // Loading states
-  if (fetchingData && isLoading) {
-    return <p>Loading data from server...</p>;
-  }
-  if (isLoading) {
-    return <p>Calculating data...</p>;
-  }
-
   return (
     <div>
       <h1>Completion Times by Activity</h1>
       <label>
-        <input
-          type="checkbox"
-          checked={isIron}
-          onChange={toggleIronMode}
+        <input 
+          type="checkbox" 
+          checked={isIron} 
+          onChange={toggleIronMode} 
         />
         Iron Mode
       </label>
@@ -214,30 +199,12 @@ const sortActivities = (key) => {
         <table>
           <thead>
             <tr>
-              <th
-                onClick={() => sortActivities('activity_name')}
-                style={{ cursor: 'pointer' }}
-              >
-                Activity Name
-                {sortConfig.key === 'activity_name'
-                  ? sortConfig.direction === 'asc'
-                    ? ' ⬆'
-                    : ' ⬇'
-                  : ''}
+              <th onClick={() => sortActivities('activity_name')} style={{ cursor: 'pointer' }}>
+                Activity Name {sortConfig.key === 'activity_name' ? (sortConfig.direction === 'asc' ? ' ⬆' : ' ⬇') : ''}
               </th>
-
-              <th
-                onClick={() => sortActivities('time_to_next_log_slot')}
-                style={{ cursor: 'pointer' }}
-              >
-                Time to Next Log Slot
-                {sortConfig.key === 'time_to_next_log_slot'
-                  ? sortConfig.direction === 'asc'
-                    ? ' ⬆'
-                    : ' ⬇'
-                  : ''}
+              <th onClick={() => sortActivities('time_to_next_log_slot')} style={{ cursor: 'pointer' }}>
+                Time to Next Log Slot {sortConfig.key === 'time_to_next_log_slot' ? (sortConfig.direction === 'asc' ? ' ⬆' : ' ⬇') : ''}
               </th>
-
               <th>Next Fastest Item</th>
             </tr>
           </thead>

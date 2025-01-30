@@ -1,12 +1,31 @@
 import React, { useState } from 'react';
 
-function FileUpload({ onUploadComplete }) {
+function FetchCollectionLogData({ onUploadComplete }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [username, setUsername] = useState('');
   const [uploadStatus, setUploadStatus] = useState('');
 
   const handleFileChange = (event) => {
     setSelectedFile(event.target.files[0]);
+  };
+
+  const processFetchedLogData = (data) => {
+    if (data.status === 'success') {
+      setUploadStatus('Log fetched successfully!');
+      
+      // ✅ Store the collection log data
+      localStorage.setItem('collectionLogData', JSON.stringify(data.data));
+      
+      // ✅ Reset the account type mode in CompletionTime.js
+      const newMode = data.data.accountType === "IRONMAN";
+      localStorage.setItem('isIron', JSON.stringify(newMode)); // ✅ Save detected mode
+      localStorage.setItem('userToggledMode', JSON.stringify(false)); // ✅ Reset manual toggle flag
+
+      // ✅ Notify the app that new data is available
+      onUploadComplete();
+    } else {
+      setUploadStatus(`Error: ${data.message}`);
+    }
   };
 
   const handleFileUpload = () => {
@@ -18,23 +37,12 @@ function FileUpload({ onUploadComplete }) {
     const formData = new FormData();
     formData.append('file', selectedFile);
 
-    // POST the file to your Django "collection-log" endpoint
     fetch('http://127.0.0.1:8000/log_importer/collection-log/', {
       method: 'POST',
       body: formData,
     })
       .then((response) => response.json())
-      .then((data) => {
-        if (data.status === 'success') {
-          setUploadStatus('File uploaded successfully!');
-          // Store the raw data in localStorage for the frontend to calculate
-          localStorage.setItem('collectionLogData', JSON.stringify(data.data));
-          // Let the parent component know upload is complete
-          onUploadComplete();
-        } else {
-          setUploadStatus(`Error: ${data.message}`);
-        }
-      })
+      .then(processFetchedLogData)
       .catch((error) => {
         setUploadStatus(`Error uploading file: ${error}`);
       });
@@ -46,24 +54,13 @@ function FileUpload({ onUploadComplete }) {
       return;
     }
 
-    // POST the username to your Django "collection-log" endpoint
     fetch('http://127.0.0.1:8000/log_importer/collection-log/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username }),
     })
       .then((response) => response.json())
-      .then((data) => {
-        if (data.status === 'success') {
-          setUploadStatus('User data fetched successfully!');
-          // Store the raw data in localStorage for the frontend to calculate
-          localStorage.setItem('collectionLogData', JSON.stringify(data.data));
-          // Let the parent component know fetch is complete
-          onUploadComplete();
-        } else {
-          setUploadStatus(`Error: ${data.message}`);
-        }
-      })
+      .then(processFetchedLogData)
       .catch((error) => {
         setUploadStatus(`Error fetching data: ${error}`);
       });
@@ -89,4 +86,4 @@ function FileUpload({ onUploadComplete }) {
   );
 }
 
-export default FileUpload;
+export default FetchCollectionLogData;

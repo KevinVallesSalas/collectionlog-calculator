@@ -107,12 +107,26 @@ def get_collection_log(request):
     
     return JsonResponse({'status': 'success', 'data': data})
 
+def get_completion_rates(request):
+    """Fetches default completion rates including extra metadata"""
+    try:
+        completion_rates = list(CompletionRate.objects.values(
+            "activity_name", 
+            "completions_per_hour_main", 
+            "completions_per_hour_iron",
+            "extra_time_to_first_completion",
+            "notes",
+            "verification_source"
+        ))
+        return JsonResponse({"status": "success", "data": completion_rates})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 @csrf_exempt
 def get_activities_data(request):
     """
     Returns raw data for each activity. 
-    The frontend can then do its own calculations.
+    The frontend will perform calculations.
     """
     if request.method == 'GET':
         activities = CompletionRate.objects.all()
@@ -120,14 +134,15 @@ def get_activities_data(request):
 
         for activity in activities:
             maps_qs = ActivityMap.objects.filter(completion_rate=activity)
-            maps_data = []
-            for m in maps_qs:
-                maps_data.append({
+            maps_data = [
+                {
                     "item_id": m.item_id,
                     "item_name": m.item_name,
                     "drop_rate_attempts": m.drop_rate_attempts,
                     "neither_inverse": m.neither_inverse,
-                })
+                }
+                for m in maps_qs
+            ]
 
             data.append({
                 "activity_index": activity.activity_index,
