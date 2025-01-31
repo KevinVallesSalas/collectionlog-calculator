@@ -93,16 +93,19 @@ function CompletionTime({ userCompletionRates }) {
       const defaultRateMain = activity.completions_per_hour_main ?? 0;
       const defaultRateIron = activity.completions_per_hour_iron ?? 0;
 
-      const userExtraTime = userCompletionRates[activity.activity_name]?.extra_time_to_first_completion ?? 0;
-      const defaultExtraTime = activity.extra_time_to_first_completion ?? 0;
+      const userExtraTimeMain = userCompletionRates[activity.activity_name]?.extra_time_to_first_completion ?? 0;
+      const userExtraTimeIron = userCompletionRates[activity.activity_name]?.extra_time_to_first_completion ?? 0;
+      
+      const defaultExtraTimeMain = activity.extra_time_to_first_completion ?? 0;
+      const defaultExtraTimeIron = activity.extra_time_to_first_completion ?? 0;
 
       const completionsPerHour = isIron
         ? userRateIron ?? defaultRateIron
         : userRateMain ?? defaultRateMain;
 
-      const extraTimeToFirstCompletion = isIron
-        ? userExtraTime
-        : defaultExtraTime;
+        const extraTimeToFirstCompletion = isIron
+        ? userExtraTimeIron || defaultExtraTimeIron
+        : userExtraTimeMain || defaultExtraTimeMain;
 
       if (activity.maps.length === 0) {
         return {

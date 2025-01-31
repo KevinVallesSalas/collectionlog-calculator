@@ -20,8 +20,11 @@ function CompletionRates({ onRatesUpdated }) {
             user_completions_per_hour_main: storedRates[rate.activity_name]?.completions_per_hour_main ?? rate.completions_per_hour_main ?? 0,
             user_completions_per_hour_iron: storedRates[rate.activity_name]?.completions_per_hour_iron ?? rate.completions_per_hour_iron ?? 0,
             user_extra_time: storedRates[rate.activity_name]?.extra_time_to_first_completion ?? rate.extra_time_to_first_completion ?? 0,
-            notes: rate.notes ?? '', // ✅ Added Notes column
-            verification_source: rate.verification_source ?? '' // ✅ Added Verification Source column
+            default_completions_per_hour_main: rate.completions_per_hour_main ?? 0, // Store default values
+            default_completions_per_hour_iron: rate.completions_per_hour_iron ?? 0,
+            default_extra_time: rate.extra_time_to_first_completion ?? 0,
+            notes: rate.notes ?? '',
+            verification_source: rate.verification_source ?? ''
           }));
 
           setCompletionRates(mergedRates);
@@ -79,7 +82,7 @@ function CompletionRates({ onRatesUpdated }) {
             </tr>
           </thead>
           <tbody>
-            {completionRates.map((rate, index) => (
+          {completionRates.map((rate, index) => (
               <tr key={index}>
                 <td>{rate.activity_name}</td>
                 <td>
@@ -88,7 +91,7 @@ function CompletionRates({ onRatesUpdated }) {
                     value={rate.user_completions_per_hour_main}
                     onChange={(e) => handleRateChange(rate.activity_name, "user_completions_per_hour_main", Number(e.target.value))}
                     min="0"
-                    title="Your custom main rate"
+                    title={`Default: ${rate.default_completions_per_hour_main}`} // ✅ Shows default value on hover
                   />
                 </td>
                 <td>
@@ -97,7 +100,7 @@ function CompletionRates({ onRatesUpdated }) {
                     value={rate.user_completions_per_hour_iron}
                     onChange={(e) => handleRateChange(rate.activity_name, "user_completions_per_hour_iron", Number(e.target.value))}
                     min="0"
-                    title="Your custom iron rate"
+                    title={`Default: ${rate.default_completions_per_hour_iron}`} // ✅ Shows default value on hover
                   />
                 </td>
                 <td>
@@ -106,7 +109,7 @@ function CompletionRates({ onRatesUpdated }) {
                     value={rate.user_extra_time}
                     onChange={(e) => handleRateChange(rate.activity_name, "user_extra_time", Number(e.target.value))}
                     min="0"
-                    title="Extra time in hours"
+                    title={`Default: ${rate.default_extra_time} hours`} // ✅ Shows default value on hover
                   />
                 </td>
                 <td>{rate.notes || '-'}</td>
