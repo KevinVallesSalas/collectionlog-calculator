@@ -78,8 +78,8 @@ function CompletionRates({ onRatesUpdated }) {
           <thead>
             <tr>
               <th>Activity Name</th>
-              <th>Your Main Rate</th>
-              <th>Your Iron Rate</th>
+              <th>Completions/hr (Main)</th>
+              <th>Completions/hr (Iron)</th>
               <th>Extra time to first completion (hours)</th>
               <th>Notes</th>
               <th>Verification Source</th>

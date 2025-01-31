@@ -83,9 +83,23 @@ export function calculateTimeToEi(items, completionsPerHour, userData) {
  *   - 'No available data' if there are no numeric (>=0) values
  *   - Otherwise, the minimum time (in hours) divided by 24 (days).
  */
-export function calculateTimeToNextLogSlot(items, completionsPerHour, extraTimeToFirstCompletion, userData) {
-  userData = validateUserData(userData); // Ensure valid userData
+export function calculateTimeToNextLogSlot(
+  items,
+  completionsPerHour,
+  extraTimeToFirstCompletion,
+  userData
+) {
+  userData = validateUserData(userData);
 
+  // 1) Check if all items are completed:
+  const uncompletedItems = items.filter(
+    (item) => !userData.completed_items.includes(item.id)
+  );
+  if (uncompletedItems.length === 0) {
+    return 'Done!';
+  }
+
+  // 2) Continue the original logic if not all items are completed:
   const valA = calculateEffectiveDroprateNeither(items, userData);
   const valB = calculateEffectiveDroprateIndependent(items, userData);
   const valC = calculateTimeToExact(items, completionsPerHour, userData);
@@ -105,6 +119,6 @@ export function calculateTimeToNextLogSlot(items, completionsPerHour, extraTimeT
 
   const minTime = Math.min(...numericValues);
   
-  // ✅ Include extraTimeToFirstCompletion in the final calculation
+  // Include extraTimeToFirstCompletion in the calculation
   return (minTime + (extraTimeToFirstCompletion ?? 0)) / 24;
 }
