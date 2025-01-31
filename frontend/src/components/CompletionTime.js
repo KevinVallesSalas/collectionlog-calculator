@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { calculateTimeToNextLogSlot } from '../utils/calculations';
 
 function findNextFastestItemName(items, userData) {
@@ -14,6 +14,7 @@ function CompletionTime({ userCompletionRates }) {
   const [rawActivities, setRawActivities] = useState([]);
   const [activities, setActivities] = useState([]);
   const [userData, setUserData] = useState({ completed_items: [] });
+  const fetchedActivities = useRef(false);
 
   // ✅ Load mode & manual toggle flag from localStorage
   const [isIron, setIsIron] = useState(() => {
@@ -26,6 +27,9 @@ function CompletionTime({ userCompletionRates }) {
   const [sortConfig, setSortConfig] = useState({ key: 'activity_name', direction: 'asc' });
 
   useEffect(() => {
+    if (fetchedActivities.current) return; // If already fetched, exit
+    fetchedActivities.current = true; // Mark as fetched
+
     async function fetchActivitiesData() {
       try {
         const response = await fetch('http://127.0.0.1:8000/log_importer/get-activities-data/');
