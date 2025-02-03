@@ -1,72 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import Runescape UF Font */
+@font-face {
+  font-family: 'Runescape UF';
+  src: url('./assets/fonts/Runescape-UF.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+body {
+  font-family: 'Runescape UF', sans-serif;
+  background-color: #201b17; /* Dark OSRS background */
+  color: #c4b59e; /* Beige text like OSRS UI */
+}
+
+/* App Container */
 .App {
   text-align: center;
+  padding: 20px;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* Navigation Bar */
+nav {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  gap: 10px;
+  background-color: #3a2f23; /* Dark brown OSRS-like nav background */
+  padding: 10px;
+  border-bottom: 3px solid #282017;
 }
 
 nav button {
+  font-family: 'Runescape UF', sans-serif;
   padding: 10px 20px;
   cursor: pointer;
+  background-color: #3a2f23;
+  color: #d4af37; /* Golden text */
+  border: 1px solid #7a5c3e;
+  border-radius: 5px;
+  transition: background 0.2s;
 }
 
 nav button.active {
-  background-color: #007bff;
+  background-color: #7a5c3e; /* Lighter brown */
   color: white;
 }
 
-.table-container {
-  max-height: 400px; /* Adjust this value as needed */
-  overflow-y: auto;  /* Enables vertical scrolling */
+nav button:hover {
+  background-color: #604832;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse; /* Optional: Makes the table borders collapse into a single border */
+/* Collection Log Styling */
+.collection-log-container {
+  max-width: 850px;
+  margin: 20px auto;
+  background-color: #2a211c; /* Dark brown box */
+  border: 3px solid #7a5c3e;
+  border-radius: 8px;
+  padding: 15px;
 }
 
-th, td {
+.collection-log-header {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ff9800; /* Bright yellow/orange text */
+  border-bottom: 2px solid #7a5c3e;
+  padding-bottom: 5px;
+}
+
+/* Categories Sidebar */
+.collection-categories {
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: #3a2f23;
+  border-right: 3px solid #7a5c3e;
   padding: 10px;
-  text-align: left;
-  border: 1px solid #ddd; /* Optional: Adds a border to the table cells */
 }
 
-th {
-  background-color: #f2f2f2; /* Optional: Sets a background color for the header */
-  position: sticky;
-  top: 0; /* Position the header at the top */
-  z-index: 1; /* Ensures the header is above other content */
+.collection-categories a {
+  display: block;
+  font-size: 16px;
+  color: #ffcc80; /* Lighter orange text */
+  padding: 5px;
+  transition: background 0.2s;
 }
 
+.collection-categories a:hover {
+  background-color: #7a5c3e;
+}
+
+/* Collection Log Items Grid */
+.collection-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+  gap: 10px;
+  padding: 10px;
+}
+
+.collection-item {
+  width: 48px;
+  height: 48px;
+  background-color: #463d30;
+  border: 2px solid #7a5c3e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collection-item img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Scrollbar Styling */
+.collection-categories::-webkit-scrollbar {
+  width: 8px;
+}
+
+.collection-categories::-webkit-scrollbar-thumb {
+  background: #7a5c3e;
+  border-radius: 4px;
+}
+
+.collection-categories::-webkit-scrollbar-track {
+  background: #3a2f23;
+}
