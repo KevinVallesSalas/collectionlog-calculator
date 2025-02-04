@@ -12,12 +12,9 @@ const ItemImage = ({ itemName, alt, fallbackSrc = "/fallback.png", ...props }) =
   const imageUrl = `https://oldschool.runescape.wiki/images/${imageFileName}`;
 
   const handleError = (e) => {
-    // Check if the src already ends with our fallback filename.
     if (!e.target.src.endsWith(fallbackSrc)) {
       console.error(`Failed to load image for "${itemName}" from ${imageUrl}. Switching to fallback image.`);
-      // Remove the error handler to avoid looping.
       e.target.onerror = null;
-      // Switch to the fallback image.
       e.target.src = fallbackSrc;
     } else {
       console.error(`Fallback image also failed for "${itemName}". Hiding image.`);
@@ -26,13 +23,23 @@ const ItemImage = ({ itemName, alt, fallbackSrc = "/fallback.png", ...props }) =
   };
 
   return (
-    <img
-      src={imageUrl}
-      alt={alt || itemName}
-      onError={handleError}
-      loading="lazy"
-      {...props}
-    />
+    <div className="relative w-12 h-12 flex items-center justify-center overflow-hidden">
+      <img
+        src={imageUrl}
+        alt={alt || itemName}
+        onError={handleError}
+        loading="lazy"
+        className="max-w-full max-h-full object-contain"
+        style={{
+          width: 'auto', 
+          height: 'auto',
+          maxWidth: '100%', 
+          maxHeight: '100%',
+          display: 'block'
+        }}
+        {...props}
+      />
+    </div>
   );
 };
 

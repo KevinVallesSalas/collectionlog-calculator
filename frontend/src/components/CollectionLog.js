@@ -41,7 +41,7 @@ function CollectionLog() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-[#18120F] relative">
-      {/* Tooltip (Now Always On Top) */}
+      {/* Tooltip */}
       {tooltip.visible && (
         <div
           className="fixed bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded shadow-lg z-50 pointer-events-none"
@@ -58,7 +58,7 @@ function CollectionLog() {
 
       {/* Responsive Collection Log Box */}
       <div
-        className="bg-[#3A2A1B] border-4 border-[#1C1109] rounded-lg text-yellow-300 p-4 shadow-lg"
+        className="bg-[#3A2A1B] border-4 border-[#1C1109] rounded-lg text-yellow-300 p-4 shadow-lg flex flex-col"
         style={{ width: `${containerWidth}px`, height: `${containerHeight}px` }}
       >
         {/* Collection Log Header */}
@@ -84,8 +84,8 @@ function CollectionLog() {
           ))}
         </div>
 
-        {/* Content Area */}
-        <div className="flex" style={{ height: `${containerHeight - 100}px` }}>
+        {/* Content Area (FIXED Overlap Issue) */}
+        <div className="flex flex-grow min-h-0">
           <aside className="w-[30%] bg-[#2A1E14] border-r-2 border-[#1C1109] overflow-y-auto p-2 custom-scrollbar">
             <ul>
               {groupedItems[activeSection] &&
@@ -113,7 +113,8 @@ function CollectionLog() {
             </ul>
           </aside>
 
-          <main className="w-[70%] bg-[#3B2C1A] p-4 overflow-y-auto custom-scrollbar">
+          {/* Main Content */}
+          <main className="w-[70%] bg-[#3B2C1A] p-4 overflow-y-auto custom-scrollbar flex-grow min-h-0">
             {activeSubsection && groupedItems[activeSection][activeSubsection] ? (
               <>
                 {/* Subsection Header */}
@@ -167,7 +168,7 @@ function CollectionLog() {
                     >
                       <ItemImage
                         itemName={item.name}
-                        className={`w-12 h-12 border-2 ${item.obtained ? "border-green-500" : "border-red-500 opacity-50"}`}
+                        className={`w-12 h-12 ${item.obtained ? "opacity-100" : "opacity-30"}`}
                       />
                       {item.quantity > 0 && (
                         <span className="absolute top-0 left-0 bg-black bg-opacity-75 text-yellow-300 text-xs font-bold px-1 rounded">
