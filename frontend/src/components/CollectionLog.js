@@ -6,6 +6,7 @@ function CollectionLog() {
   const [groupedItems, setGroupedItems] = useState({});
   const [activeSection, setActiveSection] = useState("Bosses");
   const [activeSubsection, setActiveSubsection] = useState(null);
+  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
   useEffect(() => {
     const savedData = JSON.parse(localStorage.getItem("collectionLogData"));
@@ -33,39 +34,51 @@ function CollectionLog() {
     }
   }, [activeSection, groupedItems]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const containerWidth = Math.min(windowSize.width * 0.9, 900);
+  const containerHeight = Math.min(windowSize.height * 0.8, 550);
+
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-6">
-      {/* Main Collection Log Box */}
-      <div className="w-full max-w-4xl bg-[#453A28] border-4 border-[#332717] rounded-lg text-yellow-300 p-4 shadow-lg">
-        
-        {/* Header Bar (Removed Search & Menu Button) */}
-        <div className="flex justify-between items-center border-b-4 border-[#2A1E14] pb-2 mb-2">
-          <h1 className="text-2xl font-bold text-yellow-400 mx-auto">
-            Collection Log - {logData?.uniqueObtained || 0}/{logData?.uniqueItems || 0}
-          </h1>
-          <button className="text-yellow-400 hover:text-white">✖</button>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[#18120F]">
+      {/* Responsive Collection Log Box */}
+      <div
+        className="bg-[#3A2A1B] border-4 border-[#1C1109] rounded-lg text-yellow-300 p-4 shadow-lg overflow-hidden"
+        style={{ width: `${containerWidth}px`, height: `${containerHeight}px` }}
+      >
+        {/* Collection Log Header with Darker Border Below */}
+        <div className="bg-[#2A1E14] text-orange-400 text-lg font-bold text-center py-2 border-b-4 border-[#1C1109]">
+          Collection Log - {logData?.uniqueObtained || 0}/{logData?.uniqueItems || 0}
         </div>
 
-        {/* Section Tabs */}
-        <div className="flex justify-around border-b-4 border-[#2A1E14] py-2">
+        {/* Section Tabs - No border below, only between header and tabs */}
+        <div className="flex">
           {Object.keys(groupedItems).map((section) => (
             <button
               key={section}
               onClick={() => setActiveSection(section)}
-              className={`px-4 py-1 uppercase text-sm font-bold ${
-                activeSection === section
-                  ? "text-orange-400 border-b-2 border-orange-400"
-                  : "text-yellow-300 hover:text-orange-300"
-              }`}
+              className={`flex-1 text-center py-2 text-lg font-bold uppercase border-x-2 border-t-4 border-[#1C1109]
+                ${
+                  activeSection === section
+                    ? "bg-[#4A3B2A] text-orange-400 rounded-t-lg"
+                    : "bg-[#2A1E14] text-yellow-300 hover:bg-[#3B2C1A]"
+                }`}
             >
               {section}
             </button>
           ))}
         </div>
 
-        <div className="flex h-[400px]">
-          {/* Sidebar */}
-          <aside className="w-1/3 bg-[#2A1E14] border-r-4 border-[#4A3B2A] overflow-y-auto p-2">
+        {/* Content Area - No border here */}
+        <div className="flex overflow-hidden" style={{ height: `${containerHeight - 100}px` }}>
+          {/* Sidebar (Thinner Border but Matching Darkness) */}
+          <aside className="w-[30%] bg-[#2A1E14] border-r-2 border-[#1C1109] overflow-y-auto p-2 custom-scrollbar">
             <ul>
               {groupedItems[activeSection] &&
               Object.keys(groupedItems[activeSection]).length > 0 ? (
@@ -73,7 +86,7 @@ function CollectionLog() {
                   <li key={subsection}>
                     <button
                       onClick={() => setActiveSubsection(subsection)}
-                      className={`block w-full text-left px-2 py-1 text-sm ${
+                      className={`block w-full text-left px-2 py-1 text-sm transition-all ${
                         activeSubsection === subsection
                           ? "text-orange-400"
                           : "text-yellow-300 hover:text-orange-300"
@@ -90,7 +103,7 @@ function CollectionLog() {
           </aside>
 
           {/* Main Log View */}
-          <main className="w-2/3 bg-[#3B2C1A] p-4 overflow-y-auto">
+          <main className="w-[70%] bg-[#3B2C1A] p-4 overflow-y-auto custom-scrollbar">
             <h2 className="text-lg text-orange-400 font-bold">{activeSubsection || activeSection}</h2>
             <p className="text-sm text-yellow-300">
               Obtained: 0/{groupedItems[activeSection]?.[activeSubsection]?.length || 0}
@@ -99,12 +112,16 @@ function CollectionLog() {
             {activeSubsection &&
             groupedItems[activeSection][activeSubsection] &&
             groupedItems[activeSection][activeSubsection].length > 0 ? (
-              <div className="grid grid-cols-5 gap-4 mt-3">
+              <div className="grid grid-cols-5 gap-2 mt-3">
                 {groupedItems[activeSection][activeSubsection].map((item, index) => (
                   <div key={index} className="flex flex-col items-center">
-                    <ItemImage itemName={item.name} className="w-12 h-12" />
-                    <span className="text-sm">{item.name}</span>
-                    <span>{item.obtained ? "✅" : "❌"}</span>
+                    <ItemImage 
+                      itemName={item.name} 
+                      className={`w-10 h-10 border-2 ${
+                        item.obtained ? "border-green-500" : "border-red-500 opacity-50"
+                      }`} 
+                    />
+                    <span className="text-xs">{item.name}</span>
                   </div>
                 ))}
               </div>

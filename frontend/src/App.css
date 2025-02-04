@@ -2,128 +2,134 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Import Runescape UF Font */
+/* RuneScape Font */
 @font-face {
   font-family: 'Runescape';
   src: url('./assets/fonts/runescape.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
 }
 
 body {
   font-family: 'Runescape', sans-serif;
-  background-color: #201b17; /* Dark OSRS background */
-  color: #c4b59e; /* Beige text like OSRS UI */
+  background-color: #18120F; /* Darker OSRS-like background */
+  color: #c4b59e; /* Beige text */
 }
 
-/* App Container */
-.App {
-  text-align: center;
-  padding: 20px;
-}
-
-/* Navigation Bar */
-nav {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  background-color: #3a2f23; /* Dark brown OSRS-like nav background */
-  padding: 10px;
-  border-bottom: 3px solid #282017;
-}
-
-nav button {
-  font-family: 'Runescape', sans-serif;
-  padding: 10px 20px;
-  cursor: pointer;
-  background-color: #3a2f23;
-  color: #d4af37; /* Golden text */
-  border: 1px solid #7a5c3e;
-  border-radius: 5px;
-  transition: background 0.2s;
-}
-
-nav button.active {
-  background-color: #7a5c3e; /* Lighter brown */
-  color: white;
-}
-
-nav button:hover {
-  background-color: #604832;
-}
-
-/* Collection Log Styling */
+/* Collection Log UI */
 .collection-log-container {
-  max-width: 850px;
-  margin: 20px auto;
-  background-color: #2a211c; /* Dark brown box */
-  border: 3px solid #7a5c3e;
-  border-radius: 8px;
+  max-width: 900px;
+  background-color: #3A2A1B; /* Dark brown OSRS box */
+  border: 4px solid #2A1E14;
   padding: 15px;
+  border-radius: 8px;
 }
 
-.collection-log-header {
-  font-size: 20px;
-  font-weight: bold;
-  color: #ff9800; /* Bright yellow/orange text */
-  border-bottom: 2px solid #7a5c3e;
-  padding-bottom: 5px;
-}
-
-/* Categories Sidebar */
-.collection-categories {
-  max-height: 300px;
+.boss-list {
+  max-height: 400px;
   overflow-y: auto;
-  background-color: #3a2f23;
-  border-right: 3px solid #7a5c3e;
-  padding: 10px;
-}
-
-.collection-categories a {
-  display: block;
-  font-size: 16px;
-  color: #ffcc80; /* Lighter orange text */
+  background-color: #2A1E14;
+  border-right: 4px solid #4A3B2A;
   padding: 5px;
-  transition: background 0.2s;
 }
 
-.collection-categories a:hover {
+.boss-list button {
+  font-size: 14px;
+  color: #ffcc80; /* Lighter yellow text */
+  padding: 5px;
+}
+
+.boss-list button:hover {
   background-color: #7a5c3e;
 }
 
-/* Collection Log Items Grid */
-.collection-items {
+/* Item Grid */
+.item-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
-  gap: 10px;
-  padding: 10px;
+  gap: 5px;
 }
 
-.collection-item {
-  width: 48px;
-  height: 48px;
+.item-slot {
+  width: 40px;
+  height: 40px;
   background-color: #463d30;
   border: 2px solid #7a5c3e;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.collection-item img {
+.item-slot img {
   max-width: 100%;
   height: auto;
 }
 
-/* Scrollbar Styling */
-.collection-categories::-webkit-scrollbar {
-  width: 8px;
+.item-slot.obtained {
+  border-color: green;
 }
 
-.collection-categories::-webkit-scrollbar-thumb {
-  background: #7a5c3e;
+.item-slot.missing {
+  filter: grayscale(100%);
+  opacity: 50%;
+}
+
+/* Custom Scrollbar Styling */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px; /* Thinner scrollbar */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #2A1E14; /* Dark background */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #7a5c3e; /* Brown OSRS-style scrollbar */
   border-radius: 4px;
 }
 
-.collection-categories::-webkit-scrollbar-track {
-  background: #3a2f23;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #9b7a5c; /* Lighter brown on hover */
 }
+
+/* Custom OSRS Tabs */
+.tab-button {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+  border-top: 4px solid #2A1E14;
+  border-left: 2px solid #4A3B2A;
+  border-right: 2px solid #4A3B2A;
+  background-color: #2A1E14;
+  color: #c69c6d;
+  transition: background 0.2s;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.tab-button.active {
+  background-color: #4A3B2A;
+  color: #ffcc66;
+}
+
+.tab-button:hover {
+  background-color: #3B2C1A;
+}
+
+/* Collection Log Header */
+.collection-log-header {
+  background-color: #2A1E14;
+  color: #ffcc66;
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+  padding: 8px;
+  border-bottom: 4px solid #4A3B2A;
+}
+
+/* Darker Uniform Border */
+.border-uniform {
+  border: 4px solid #1C1109; /* Slightly darker, matches OSRS */
+}
+
+
+
+
