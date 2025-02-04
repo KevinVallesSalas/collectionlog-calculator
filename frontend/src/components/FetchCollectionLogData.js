@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'; 
 
 function FetchCollectionLogData({ onUploadComplete }) {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -13,13 +13,24 @@ function FetchCollectionLogData({ onUploadComplete }) {
     if (data.status === 'success') {
       setUploadStatus('Log fetched successfully!');
       
-      // ✅ Store the collection log data
-      localStorage.setItem('collectionLogData', JSON.stringify(data.data));
-      
-      // ✅ Reset the account type mode in CompletionTime.js
-      const newMode = data.data.accountType === "IRONMAN";
-      localStorage.setItem('isIron', JSON.stringify(newMode)); // ✅ Save detected mode
-      localStorage.setItem('userToggledMode', JSON.stringify(false)); // ✅ Reset manual toggle flag
+      // ✅ Store collection log data along with boss kill counts
+      const logData = data.data;
+
+      if (logData.sections?.Bosses) {
+        Object.keys(logData.sections.Bosses).forEach((boss) => {
+          if (!logData.sections.Bosses[boss].killCount) {
+            logData.sections.Bosses[boss].killCount = { name: "Unknown", amount: 0 }; // Default if missing
+          }
+        });
+      }
+
+      // ✅ Save the data to local storage
+      localStorage.setItem('collectionLogData', JSON.stringify(logData));
+
+      // ✅ Store Ironman status
+      const newMode = logData.accountType === "IRONMAN";
+      localStorage.setItem('isIron', JSON.stringify(newMode));
+      localStorage.setItem('userToggledMode', JSON.stringify(false));
 
       // ✅ Notify the app that new data is available
       onUploadComplete();

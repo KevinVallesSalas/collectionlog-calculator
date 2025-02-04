@@ -7,25 +7,19 @@ function CollectionLog() {
   const [activeSection, setActiveSection] = useState("Bosses");
   const [activeSubsection, setActiveSubsection] = useState(null);
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const [tooltip, setTooltip] = useState({ visible: false, text: "", x: 0, y: 0 });
 
   useEffect(() => {
     const savedData = JSON.parse(localStorage.getItem("collectionLogData"));
     if (savedData) {
       setLogData(savedData);
-      const sections = savedData.sections || {
-        Bosses: {},
-        Raids: {},
-        Clues: {},
-        Minigames: {},
-        Other: {},
-      };
-      setGroupedItems(sections);
-      const subs = Object.keys(sections[activeSection] || {});
+      setGroupedItems(savedData.sections || {});
+      const subs = Object.keys(savedData.sections?.[activeSection] || {});
       if (subs.length > 0) {
         setActiveSubsection(subs[0]);
       }
     }
-  }, []);
+  }, [activeSection]);
 
   useEffect(() => {
     if (groupedItems[activeSection]) {
@@ -46,18 +40,33 @@ function CollectionLog() {
   const containerHeight = Math.min(windowSize.height * 0.8, 550);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-[#18120F]">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[#18120F] relative">
+      {/* Tooltip (Now Always On Top) */}
+      {tooltip.visible && (
+        <div
+          className="fixed bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded shadow-lg z-50 pointer-events-none"
+          style={{
+            left: `${tooltip.x}px`,
+            top: `${tooltip.y}px`,
+            whiteSpace: "nowrap",
+          }}
+        >
+          <div className="font-bold">{tooltip.text.split("\n")[0]}</div>
+          {tooltip.text.split("\n")[1] && <div className="text-gray-300">{tooltip.text.split("\n")[1]}</div>}
+        </div>
+      )}
+
       {/* Responsive Collection Log Box */}
       <div
-        className="bg-[#3A2A1B] border-4 border-[#1C1109] rounded-lg text-yellow-300 p-4 shadow-lg overflow-hidden"
+        className="bg-[#3A2A1B] border-4 border-[#1C1109] rounded-lg text-yellow-300 p-4 shadow-lg"
         style={{ width: `${containerWidth}px`, height: `${containerHeight}px` }}
       >
-        {/* Collection Log Header with Darker Border Below */}
+        {/* Collection Log Header */}
         <div className="bg-[#2A1E14] text-orange-400 text-lg font-bold text-center py-2 border-b-4 border-[#1C1109]">
           Collection Log - {logData?.uniqueObtained || 0}/{logData?.uniqueItems || 0}
         </div>
 
-        {/* Section Tabs - No border below, only between header and tabs */}
+        {/* Section Tabs */}
         <div className="flex">
           {Object.keys(groupedItems).map((section) => (
             <button
@@ -75,56 +84,100 @@ function CollectionLog() {
           ))}
         </div>
 
-        {/* Content Area - No border here */}
-        <div className="flex overflow-hidden" style={{ height: `${containerHeight - 100}px` }}>
-          {/* Sidebar (Thinner Border but Matching Darkness) */}
+        {/* Content Area */}
+        <div className="flex" style={{ height: `${containerHeight - 100}px` }}>
           <aside className="w-[30%] bg-[#2A1E14] border-r-2 border-[#1C1109] overflow-y-auto p-2 custom-scrollbar">
             <ul>
               {groupedItems[activeSection] &&
               Object.keys(groupedItems[activeSection]).length > 0 ? (
-                Object.keys(groupedItems[activeSection]).map((subsection) => (
-                  <li key={subsection}>
-                    <button
-                      onClick={() => setActiveSubsection(subsection)}
-                      className={`block w-full text-left px-2 py-1 text-sm transition-all ${
-                        activeSubsection === subsection
-                          ? "text-orange-400"
-                          : "text-yellow-300 hover:text-orange-300"
-                      }`}
-                    >
-                      {subsection}
-                    </button>
-                  </li>
-                ))
+                Object.keys(groupedItems[activeSection]).map((subsection) => {
+                  const items = groupedItems[activeSection][subsection]?.items || [];
+                  const obtainedCount = items.filter((item) => item.obtained).length;
+                  const totalItems = items.length;
+                  const subsectionClass = obtainedCount === totalItems ? "text-green-400" : "text-yellow-300";
+
+                  return (
+                    <li key={subsection}>
+                      <button
+                        onClick={() => setActiveSubsection(subsection)}
+                        className={`block w-full text-left px-2 py-1 text-sm transition-all ${subsectionClass} hover:text-orange-300`}
+                      >
+                        {subsection}
+                      </button>
+                    </li>
+                  );
+                })
               ) : (
                 <p className="text-sm text-gray-400">No categories available.</p>
               )}
             </ul>
           </aside>
 
-          {/* Main Log View */}
           <main className="w-[70%] bg-[#3B2C1A] p-4 overflow-y-auto custom-scrollbar">
-            <h2 className="text-lg text-orange-400 font-bold">{activeSubsection || activeSection}</h2>
-            <p className="text-sm text-yellow-300">
-              Obtained: 0/{groupedItems[activeSection]?.[activeSubsection]?.length || 0}
-            </p>
-            
-            {activeSubsection &&
-            groupedItems[activeSection][activeSubsection] &&
-            groupedItems[activeSection][activeSubsection].length > 0 ? (
-              <div className="grid grid-cols-5 gap-2 mt-3">
-                {groupedItems[activeSection][activeSubsection].map((item, index) => (
-                  <div key={index} className="flex flex-col items-center">
-                    <ItemImage 
-                      itemName={item.name} 
-                      className={`w-10 h-10 border-2 ${
-                        item.obtained ? "border-green-500" : "border-red-500 opacity-50"
-                      }`} 
-                    />
-                    <span className="text-xs">{item.name}</span>
-                  </div>
-                ))}
-              </div>
+            {activeSubsection && groupedItems[activeSection][activeSubsection] ? (
+              <>
+                {/* Subsection Header */}
+                <h2 className="text-lg text-orange-400 font-bold">{activeSubsection}</h2>
+
+                {/* Obtained Items Count with Color Formatting */}
+                {(() => {
+                  const items = groupedItems[activeSection][activeSubsection]?.items || [];
+                  const obtainedCount = items.filter((item) => item.obtained).length;
+                  const totalItems = items.length;
+                  const obtainedNumberColor =
+                    obtainedCount === 0 ? "text-red-400" : obtainedCount === totalItems ? "text-green-400" : "text-yellow-300";
+
+                  return (
+                    <p className="text-sm text-yellow-300 font-bold">
+                      Obtained: <span className={obtainedNumberColor}>{obtainedCount}/{totalItems}</span>
+                    </p>
+                  );
+                })()}
+
+                {/* Kill Count Display (Only if valid) */}
+                {(() => {
+                  const killCount = groupedItems[activeSection][activeSubsection]?.killCount || {};
+                  return killCount.name && killCount.amount > 0 ? (
+                    <p className="text-sm text-yellow-300">
+                      {killCount.name}: {killCount.amount}
+                    </p>
+                  ) : null;
+                })()}
+
+                {/* Items Display */}
+                <div className="grid grid-cols-5 gap-2 mt-3">
+                  {groupedItems[activeSection][activeSubsection].items.map((item, index) => (
+                    <div
+                      key={index}
+                      className="relative group w-12 h-12"
+                      onMouseEnter={(e) => {
+                        let tooltipText = item.name;
+                        if (item.obtained && item.obtainedAt) {
+                          tooltipText += `\nObtained: ${new Date(item.obtainedAt).toISOString().split("T")[0]}`;
+                        }
+
+                        setTooltip({
+                          visible: true,
+                          text: tooltipText,
+                          x: e.clientX + 10,
+                          y: e.clientY + 10,
+                        });
+                      }}
+                      onMouseLeave={() => setTooltip({ visible: false, text: "", x: 0, y: 0 })}
+                    >
+                      <ItemImage
+                        itemName={item.name}
+                        className={`w-12 h-12 border-2 ${item.obtained ? "border-green-500" : "border-red-500 opacity-50"}`}
+                      />
+                      {item.quantity > 0 && (
+                        <span className="absolute top-0 left-0 bg-black bg-opacity-75 text-yellow-300 text-xs font-bold px-1 rounded">
+                          {item.quantity}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
               <p className="text-sm text-gray-400 mt-3">No items available.</p>
             )}
