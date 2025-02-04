@@ -65,19 +65,35 @@ def handle_collection_log(request):
 
                 for entry_name, entry_data in tab_entries.items():
                     if entry_name not in section:
-                        section[entry_name] = []
+                        section[entry_name] = {
+                            "items": [],
+                            "killCount": {"name": "Unknown", "amount": 0}  # Default structure
+                        }
 
-                    # Handle different formats (API has "items", manual upload may have direct lists)
+                    # Extract items
                     if isinstance(entry_data, dict) and "items" in entry_data:
-                        section[entry_name].extend(entry_data["items"])
+                        for item in entry_data["items"]:
+                            # Ensure `obtainedAt` is included for hover tooltips
+                            item.setdefault("obtainedAt", None)
+                            section[entry_name]["items"].append(item)
                     elif isinstance(entry_data, list):
-                        section[entry_name].extend(entry_data)
+                        section[entry_name]["items"].extend(entry_data)
+
+                    # Extract kill count from within the boss entry
+                    if "killCount" in entry_data and isinstance(entry_data["killCount"], list):
+                        for kill_entry in entry_data["killCount"]:
+                            if "name" in kill_entry and "amount" in kill_entry:
+                                section[entry_name]["killCount"] = {
+                                    "name": kill_entry["name"],
+                                    "amount": kill_entry["amount"]
+                                }
+                                break  # Stop after the first match
 
             # Sort sections: Alphabetical except Clues
             sorted_sections = {}
             for section, entries in sections.items():
                 if section == "Clues":
-                    sorted_clues = {clue: sections["Clues"].get(clue, []) for clue in clue_order if clue in sections["Clues"]}
+                    sorted_clues = {clue: sections["Clues"].get(clue, {"items": [], "killCount": {"name": "Unknown", "amount": 0}}) for clue in clue_order if clue in sections["Clues"]}
                     unknown_clues = {k: v for k, v in sections["Clues"].items() if k not in clue_order}
                     sorted_clues.update(unknown_clues)
                     sorted_sections["Clues"] = sorted_clues
