@@ -4,14 +4,14 @@
 
 /* Import Runescape UF Font */
 @font-face {
-  font-family: 'Runescape UF';
-  src: url('./assets/fonts/Runescape-UF.ttf') format('truetype');
+  font-family: 'Runescape';
+  src: url('./assets/fonts/runescape.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
 
 body {
-  font-family: 'Runescape UF', sans-serif;
+  font-family: 'Runescape', sans-serif;
   background-color: #201b17; /* Dark OSRS background */
   color: #c4b59e; /* Beige text like OSRS UI */
 }
@@ -33,7 +33,7 @@ nav {
 }
 
 nav button {
-  font-family: 'Runescape UF', sans-serif;
+  font-family: 'Runescape', sans-serif;
   padding: 10px 20px;
   cursor: pointer;
   background-color: #3a2f23;

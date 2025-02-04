@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './App.css';
 import FetchCollectionlogData from './components/FetchCollectionLogData';
 import CollectionLog from './components/CollectionLog';
 import CompletionTime from './components/CompletionTime';

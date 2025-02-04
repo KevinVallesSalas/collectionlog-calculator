@@ -1,13 +1,17 @@
 {
 	"folders": [
-		{
-			"path": "."
-		}
+	  {
+		"path": "."
+	  }
 	],
 	"settings": {
-		"cSpell.words": [
-			"droprate",
-			"Minigames"
-		]
+	  "cSpell.words": [
+		"droprate",
+		"Minigames"
+	  ],
+	  "css.validate": false,
+	  "less.validate": false,
+	  "scss.validate": false
 	}
-}
+  }
+  
