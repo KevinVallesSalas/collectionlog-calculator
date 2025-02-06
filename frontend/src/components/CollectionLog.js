@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from "react";
 import ItemImage from "./ItemImage";
+import { preloadImages } from "../utils/preloadImages"; // update if needed
+import { useItemsData } from "../contexts/ItemsProvider"; // NEW: import the hook
 
 function CollectionLog() {
   const [logData, setLogData] = useState(null);
   const [groupedItems, setGroupedItems] = useState({});
   const [activeSection, setActiveSection] = useState("Bosses");
   const [activeSubsection, setActiveSubsection] = useState(null);
-  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const [windowSize, setWindowSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
   const [tooltip, setTooltip] = useState({ visible: false, text: "", x: 0, y: 0 });
 
+  // Access the items.json data from context (which contains imageUrl and wikiPageUrl)
+  const itemsData = useItemsData();
+
+  // 1) Load localStorage data for collection log
   useEffect(() => {
     const savedData = JSON.parse(localStorage.getItem("collectionLogData"));
     if (savedData) {
@@ -21,6 +30,34 @@ function CollectionLog() {
     }
   }, [activeSection]);
 
+  // 2) Whenever groupedItems changes, build an array of { name, url } and preload them
+  // (Optional: If you want to keep preloading logic, you could adjust it to use the new itemsData too.)
+  useEffect(() => {
+    if (groupedItems && Object.keys(groupedItems).length > 0) {
+      const allItemEntries = [];
+      // Loop over every subsection of every section
+      Object.values(groupedItems).forEach((subSections) => {
+        Object.values(subSections).forEach((subsectionObj) => {
+          const items = subsectionObj.items || [];
+          items.forEach((item) => {
+            // If itemsData is available, use the imageUrl from it;
+            // otherwise, fallback to the old guess-based URL.
+            let url;
+            if (itemsData && itemsData[String(item.id)] && itemsData[String(item.id)].imageUrl) {
+              url = itemsData[String(item.id)].imageUrl;
+            } else {
+              const imageFileName = item.name.replace(/\s+/g, "_") + ".png";
+              url = `https://oldschool.runescape.wiki/images/${imageFileName}`;
+            }
+            allItemEntries.push({ name: item.name, url });
+          });
+        });
+      });
+      preloadImages(allItemEntries);
+    }
+  }, [groupedItems, itemsData]);
+
+  // 3) Update subsections list whenever activeSection or groupedItems changes
   useEffect(() => {
     if (groupedItems[activeSection]) {
       const subs = Object.keys(groupedItems[activeSection]);
@@ -28,6 +65,7 @@ function CollectionLog() {
     }
   }, [activeSection, groupedItems]);
 
+  // 4) Handle window resize
   useEffect(() => {
     const handleResize = () => {
       setWindowSize({ width: window.innerWidth, height: window.innerHeight });
@@ -52,7 +90,9 @@ function CollectionLog() {
           }}
         >
           <div className="font-bold">{tooltip.text.split("\n")[0]}</div>
-          {tooltip.text.split("\n")[1] && <div className="text-gray-300">{tooltip.text.split("\n")[1]}</div>}
+          {tooltip.text.split("\n")[1] && (
+            <div className="text-gray-300">{tooltip.text.split("\n")[1]}</div>
+          )}
         </div>
       )}
 
@@ -84,8 +124,9 @@ function CollectionLog() {
           ))}
         </div>
 
-        {/* Content Area (FIXED Overlap Issue) */}
+        {/* Content Area */}
         <div className="flex flex-grow min-h-0">
+          {/* Left Sidebar */}
           <aside className="w-[30%] bg-[#2A1E14] border-r-2 border-[#1C1109] overflow-y-auto p-2 custom-scrollbar">
             <ul>
               {groupedItems[activeSection] &&
@@ -94,7 +135,8 @@ function CollectionLog() {
                   const items = groupedItems[activeSection][subsection]?.items || [];
                   const obtainedCount = items.filter((item) => item.obtained).length;
                   const totalItems = items.length;
-                  const subsectionClass = obtainedCount === totalItems ? "text-green-400" : "text-yellow-300";
+                  const subsectionClass =
+                    obtainedCount === totalItems ? "text-green-400" : "text-yellow-300";
 
                   return (
                     <li key={subsection}>
@@ -120,22 +162,29 @@ function CollectionLog() {
                 {/* Subsection Header */}
                 <h2 className="text-lg text-orange-400 font-bold">{activeSubsection}</h2>
 
-                {/* Obtained Items Count with Color Formatting */}
+                {/* Obtained Items Count */}
                 {(() => {
                   const items = groupedItems[activeSection][activeSubsection]?.items || [];
                   const obtainedCount = items.filter((item) => item.obtained).length;
                   const totalItems = items.length;
                   const obtainedNumberColor =
-                    obtainedCount === 0 ? "text-red-400" : obtainedCount === totalItems ? "text-green-400" : "text-yellow-300";
+                    obtainedCount === 0
+                      ? "text-red-400"
+                      : obtainedCount === totalItems
+                      ? "text-green-400"
+                      : "text-yellow-300";
 
                   return (
                     <p className="text-sm text-yellow-300 font-bold">
-                      Obtained: <span className={obtainedNumberColor}>{obtainedCount}/{totalItems}</span>
+                      Obtained:{" "}
+                      <span className={obtainedNumberColor}>
+                        {obtainedCount}/{totalItems}
+                      </span>
                     </p>
                   );
                 })()}
 
-                {/* Kill Count Display (Only if valid) */}
+                {/* Kill Count Display */}
                 {(() => {
                   const killCount = groupedItems[activeSection][activeSubsection]?.killCount || {};
                   return killCount.name && killCount.amount > 0 ? (
@@ -154,9 +203,10 @@ function CollectionLog() {
                       onMouseEnter={(e) => {
                         let tooltipText = item.name;
                         if (item.obtained && item.obtainedAt) {
-                          tooltipText += `\nObtained: ${new Date(item.obtainedAt).toISOString().split("T")[0]}`;
+                          tooltipText += `\nObtained: ${new Date(item.obtainedAt)
+                            .toISOString()
+                            .split("T")[0]}`;
                         }
-
                         setTooltip({
                           visible: true,
                           text: tooltipText,
@@ -166,8 +216,10 @@ function CollectionLog() {
                       }}
                       onMouseLeave={() => setTooltip({ visible: false, text: "", x: 0, y: 0 })}
                     >
+                      {/* Use the updated ItemImage component with itemId and fallbackName */}
                       <ItemImage
-                        itemName={item.name}
+                        itemId={item.id}
+                        fallbackName={item.name}
                         className={`w-12 h-12 ${item.obtained ? "opacity-100" : "opacity-30"}`}
                       />
                       {item.quantity > 0 && (

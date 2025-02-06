@@ -1,4 +1,6 @@
 import requests 
+import os
+from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
@@ -115,7 +117,6 @@ def handle_collection_log(request):
 
     return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
 
-
 def get_collection_log(request):
     """ Fetches all collection log items and their obtained status. """
     items = Item.objects.all()
@@ -171,3 +172,15 @@ def get_activities_data(request):
         return JsonResponse({"status": "success", "data": data}, safe=False)
     
     return JsonResponse({"status": "error", "message": "Invalid method"}, status=405)
+
+def items_json_view(request):
+    json_path = os.path.join(settings.BASE_DIR, "log_importer", "static", "items.json")
+    
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return JsonResponse(data, safe=True)
+    except FileNotFoundError:
+        return JsonResponse({"error": "items.json not found"}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON format in items.json"}, status=500)
