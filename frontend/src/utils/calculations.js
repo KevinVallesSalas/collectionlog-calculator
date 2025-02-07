@@ -78,19 +78,19 @@ export function calculateTimeToNextLogSlot(items, completionsPerHour, extraTimeT
 /* --- New functions --- */
 
 /**
- * Finds the next fastest item name among uncompleted items.
+ * Finds the next fastest uncompleted item and returns both its id and name.
  */
-export function findNextFastestItemName(items, userData) {
+export function findNextFastestItem(items, userData) {
   userData = validateUserData(userData);
   const uncompleted = items.filter((i) => !userData.completed_items.includes(i.id));
-  if (uncompleted.length === 0) return '-';
+  if (uncompleted.length === 0) return { id: null, name: '-' };
   uncompleted.sort((a, b) => a.drop_rate_attempts - b.drop_rate_attempts);
-  return uncompleted[0].name || '-';
+  return { id: uncompleted[0].id, name: uncompleted[0].name || '-' };
 }
 
 /**
  * Given an activity and the current user settings, this function
- * returns an object with the calculated time to next log slot and fastest slot name.
+ * returns an object with the calculated time to next log slot and fastest slot info.
  */
 export function calculateActivityData(activity, userCompletionRates, isIron, userData) {
   // Create unified fields from activity.maps
@@ -125,6 +125,7 @@ export function calculateActivityData(activity, userCompletionRates, isIron, use
       activity_name: activity.activity_name,
       time_to_next_log_slot: 'No available data',
       fastest_slot_name: '-',
+      fastest_slot_id: null,
     };
   }
 
@@ -135,12 +136,14 @@ export function calculateActivityData(activity, userCompletionRates, isIron, use
     userData || { completed_items: [] }
   );
 
-  const fastestSlotName = findNextFastestItemName(mappedItems, userData || { completed_items: [] });
+  // Use the new helper to get both the fastest slot’s id and name.
+  const fastestSlot = findNextFastestItem(mappedItems, userData || { completed_items: [] });
 
   return {
     activity_name: activity.activity_name,
     time_to_next_log_slot: nextSlotTime,
-    fastest_slot_name: fastestSlotName,
+    fastest_slot_name: fastestSlot.name,
+    fastest_slot_id: fastestSlot.id,
     completions_per_hour: completionsPerHour,
     extra_time_to_first_completion: extraTimeToFirstCompletion,
   };
