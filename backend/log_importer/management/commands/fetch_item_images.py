@@ -11,23 +11,25 @@ class Command(BaseCommand):
     help = (
         "Waterfall approach for item images + store wiki page URL:\n"
         "1) Find wiki page for item ID (store wikiPageUrl)\n"
-        "2) Guess-based direct .png\n"
+        "2) Guess-based direct .png using the unique wiki page title\n"
         "3) Parse infobox HTML to find main sprite\n"
-        "4) Fuzzy approach w/ ratio >= 0.7\n"
-        "If all fail, skip."
+        "4) Fuzzy approach (with ratio >= 0.7) using the unique wiki page title\n"
+        "If all fail, add the item to manual_updates.json for later correction."
     )
 
     WIKI_LOOKUP_URL = "https://oldschool.runescape.wiki/w/Special:Lookup?type=item&id={item_id}"
     WIKI_BASE_PAGE = "https://oldschool.runescape.wiki/w/"  # For the HTML parse
     WIKI_API_URL = "https://oldschool.runescape.wiki/api.php"
 
-    REQUEST_DELAY = 0.05
+    REQUEST_DELAY = 0.0005
 
     def handle(self, *args, **options):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         static_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "static"))
         items_json_path = os.path.join(static_dir, "items.json")
+        manual_updates_path = os.path.join(static_dir, "manual_updates.json")
 
+        # Load items.json
         if not os.path.exists(items_json_path):
             self.stdout.write(self.style.ERROR(f"items.json not found at {items_json_path}"))
             return
@@ -35,19 +37,25 @@ class Command(BaseCommand):
         with open(items_json_path, "r", encoding="utf-8") as f:
             items_data = json.load(f)
 
+        # Load manual_updates.json if it exists; otherwise, start with an empty dict.
+        if os.path.exists(manual_updates_path):
+            with open(manual_updates_path, "r", encoding="utf-8") as f:
+                manual_updates = json.load(f)
+        else:
+            manual_updates = {}
+
         all_keys = list(items_data.keys())
         total_items = len(all_keys)
         self.stdout.write(f"Loaded items.json with {total_items} items.")
 
         updated_count = 0
-        failed_items = []
 
         for idx, key in enumerate(all_keys, start=1):
             item = items_data[key]
             item_id = item["id"]
             item_name = item["name"]
 
-            # Skip if we already have an image
+            # Skip if an image is already set.
             if item.get("imageUrl"):
                 self.stdout.write(
                     f"[{idx}/{total_items}] '{item_name}' => already has imageUrl, skipping."
@@ -56,79 +64,101 @@ class Command(BaseCommand):
 
             self.stdout.write(f"\n[{idx}/{total_items}] Processing ID={item_id}, name='{item_name}'...")
 
+            # 0) Check for manual override first.
+            manual_override = manual_updates.get(str(item_id)) or manual_updates.get(item_id)
+            if manual_override and manual_override.get("imageUrl"):
+                item["imageUrl"] = manual_override["imageUrl"]
+                if manual_override.get("wikiPageUrl") and not item.get("wikiPageUrl"):
+                    item["wikiPageUrl"] = manual_override["wikiPageUrl"]
+                updated_count += 1
+                self.stdout.write(self.style.SUCCESS(
+                    f" => [Manual Override] Applied imageUrl: {manual_override['imageUrl']}"
+                ))
+                # Remove the entry so it isn’t used on subsequent runs.
+                if str(item_id) in manual_updates:
+                    del manual_updates[str(item_id)]
+                elif item_id in manual_updates:
+                    del manual_updates[item_id]
+                self.save_items_json(items_json_path, items_data)
+                continue
+
             # ----------------------------------------------------------------
-            # STEP 1) Always get page title / final URL first, so we can store
-            #         wikiPageUrl no matter which approach ends up working.
+            # STEP 1) Lookup page title and URL from item ID.
             # ----------------------------------------------------------------
             page_title, final_url = self.get_page_title_for_item(item_id)
             if final_url:
-                # Store it so front end can link the wiki page
                 item["wikiPageUrl"] = final_url
             else:
-                # If we have no final_url at all, it’s likely not found on the wiki
                 self.stdout.write(self.style.WARNING(
                     f" => No wiki page found for {item_id} ({item_name})."
                 ))
-                failed_items.append((item_id, item_name))
+                if not (manual_updates.get(str(item_id)) or manual_updates.get(item_id)):
+                    manual_updates[str(item_id)] = {
+                        "name": item_name,
+                        "imageUrl": "",
+                        "wikiPageUrl": ""
+                    }
                 continue
 
             # ----------------------------------------------------------------
-            # STEP 2) Guess-based approach
+            # STEP 2) Guess-based approach using page_title.
             # ----------------------------------------------------------------
-            guess_url = self.try_guess_url(item_name)
+            guess_url = self.try_guess_url(page_title)
             if guess_url:
                 item["imageUrl"] = guess_url
                 updated_count += 1
-                self.stdout.write(
-                    self.style.SUCCESS(f" => [Guess-Based] Found: {guess_url}")
-                )
+                self.stdout.write(self.style.SUCCESS(f" => [Guess-Based] Found: {guess_url}"))
                 self.save_items_json(items_json_path, items_data)
-                time.sleep(self.REQUEST_DELAY)
                 continue
 
             # ----------------------------------------------------------------
-            # STEP 3) HTML Infobox parse
+            # STEP 3) HTML Infobox parse.
             # ----------------------------------------------------------------
             infobox_url = self.parse_infobox_image(page_title)
             if infobox_url:
                 item["imageUrl"] = infobox_url
                 updated_count += 1
-                self.stdout.write(
-                    self.style.SUCCESS(f" => [HTML Infobox] Found: {infobox_url}")
-                )
+                self.stdout.write(self.style.SUCCESS(f" => [HTML Infobox] Found: {infobox_url}"))
                 self.save_items_json(items_json_path, items_data)
-                time.sleep(self.REQUEST_DELAY)
                 continue
 
             # ----------------------------------------------------------------
-            # STEP 4) Fuzzy approach (with higher threshold)
+            # STEP 4) Fuzzy approach (with higher threshold) using page_title.
             # ----------------------------------------------------------------
             fuzzy_url = self.fuzzy_lookup(page_title, item_name, min_ratio=0.7)
             if fuzzy_url:
                 item["imageUrl"] = fuzzy_url
                 updated_count += 1
-                self.stdout.write(
-                    self.style.SUCCESS(f" => [Fuzzy Approach] Found: {fuzzy_url}")
-                )
+                self.stdout.write(self.style.SUCCESS(f" => [Fuzzy Approach] Found: {fuzzy_url}"))
                 self.save_items_json(items_json_path, items_data)
-                time.sleep(self.REQUEST_DELAY)
                 continue
 
-            # If everything fails:
+            # If all automated methods fail, add/update an entry in manual_updates.
             self.stdout.write(self.style.WARNING(" => [NO IMAGE FOUND]"))
-            failed_items.append((item_id, item_name))
+            if not (manual_updates.get(str(item_id)) or manual_updates.get(item_id)):
+                manual_updates[str(item_id)] = {
+                    "name": item_name,
+                    "imageUrl": "",
+                    "wikiPageUrl": item.get("wikiPageUrl", "")
+                }
 
         # Final summary
         self.stdout.write(self.style.SUCCESS(
             f"\nDone! Updated {updated_count} items out of {total_items}."
         ))
-        if failed_items:
-            self.stdout.write(self.style.ERROR("\nItems with no imageUrl:"))
-            for fid, fname in failed_items:
-                self.stdout.write(f" - ID={fid}, Name='{fname}'")
+
+        # Save the updated items.json.
+        self.save_items_json(items_json_path, items_data)
+
+        # Write out the manual_updates file with any remaining entries.
+        with open(manual_updates_path, "w", encoding="utf-8") as f:
+            json.dump(manual_updates, f, indent=2, ensure_ascii=False)
+        self.stdout.write(self.style.SUCCESS(
+            f"Manual update file written to {manual_updates_path}."
+        ))
 
     # ----------------------------------------------------------------------
-    # A) Page title from item ID (store page URL)
+    # Method: get_page_title_for_item
     # ----------------------------------------------------------------------
     def get_page_title_for_item(self, item_id):
         lookup_url = self.WIKI_LOOKUP_URL.format(item_id=item_id)
@@ -159,11 +189,11 @@ class Command(BaseCommand):
             return (None, None)
 
     # ----------------------------------------------------------------------
-    # B) Guess-based method
+    # Method: try_guess_url (using the unique page_title)
     # ----------------------------------------------------------------------
-    def try_guess_url(self, item_name):
-        guess_filename = re.sub(r"[’']", "", item_name)
-        guess_filename = guess_filename.replace(" ", "_") + ".png"
+    def try_guess_url(self, page_title):
+        # Use the wiki page title to create a guess filename.
+        guess_filename = page_title.replace(" ", "_") + ".png"
         guess_url = f"https://oldschool.runescape.wiki/images/{guess_filename}"
 
         headers = {
@@ -184,7 +214,7 @@ class Command(BaseCommand):
             return None
 
     # ----------------------------------------------------------------------
-    # C) HTML Infobox parse
+    # Method: parse_infobox_image
     # ----------------------------------------------------------------------
     def parse_infobox_image(self, page_title):
         url = self.WIKI_BASE_PAGE + page_title
@@ -200,7 +230,6 @@ class Command(BaseCommand):
                 self.stdout.write(f"[DEBUG] parse_infobox: {resp.status_code} for {url}")
                 return None
 
-            from bs4 import BeautifulSoup
             soup = BeautifulSoup(resp.text, "html.parser")
             infobox_img_td = soup.find("td", class_="infobox-image")
             if not infobox_img_td:
@@ -221,7 +250,7 @@ class Command(BaseCommand):
             return None
 
     # ----------------------------------------------------------------------
-    # D) Fuzzy approach
+    # Method: fuzzy_lookup (using page_title for a more unique base)
     # ----------------------------------------------------------------------
     def fuzzy_lookup(self, page_title, item_name, min_ratio=0.7):
         query_params = {
@@ -250,11 +279,11 @@ class Command(BaseCommand):
             if not images:
                 return None
 
-            png_images = [img for img in images if ".png" in img["title"].lower() or ".jpg" in img["title"].lower()]
+            png_images = [img for img in images if (".png" in img["title"].lower() or ".jpg" in img["title"].lower())]
             if not png_images:
                 return None
 
-            best_image = self.pick_best_image_match(item_name, png_images, min_ratio)
+            best_image = self.pick_best_image_match(page_title, png_images, min_ratio)
             if not best_image:
                 return None
 
@@ -266,7 +295,10 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f"[ERROR] in fuzzy_lookup({page_title}): {e}"))
             return None
 
-    def pick_best_image_match(self, item_name, images_list, min_ratio=0.7):
+    # ----------------------------------------------------------------------
+    # Method: pick_best_image_match (using page_title as base)
+    # ----------------------------------------------------------------------
+    def pick_best_image_match(self, page_title, images_list, min_ratio=0.7):
         def clean_str(s):
             s = s.lower()
             s = re.sub(r"[’']", "", s)
@@ -274,13 +306,13 @@ class Command(BaseCommand):
             s = re.sub(r"[^a-z0-9_ ]+", "", s)
             return s.strip()
 
-        item_clean = clean_str(item_name).replace(" ", "_")
+        base_string = clean_str(page_title).replace(" ", "_")
 
         # Substring approach
         substring_candidates = []
         for img in images_list:
             fc = clean_str(img["title"])
-            if item_clean in fc:
+            if base_string in fc:
                 substring_candidates.append(img)
 
         if substring_candidates:
@@ -292,7 +324,7 @@ class Command(BaseCommand):
         best_img = None
         for img in images_list:
             fc = clean_str(img["title"])
-            ratio = SequenceMatcher(None, item_clean, fc).ratio()
+            ratio = SequenceMatcher(None, base_string, fc).ratio()
             if ratio > best_score:
                 best_score = ratio
                 best_img = img
@@ -302,6 +334,9 @@ class Command(BaseCommand):
             return best_img
         return None
 
+    # ----------------------------------------------------------------------
+    # Method: get_direct_file_url
+    # ----------------------------------------------------------------------
     def get_direct_file_url(self, file_title):
         q_params = {
             "action": "query",
@@ -334,6 +369,9 @@ class Command(BaseCommand):
             self.stdout.write(f"[ERROR] get_direct_file_url({file_title}): {e}")
             return None
 
+    # ----------------------------------------------------------------------
+    # Method: save_items_json
+    # ----------------------------------------------------------------------
     def save_items_json(self, path, data):
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
