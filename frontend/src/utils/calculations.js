@@ -13,14 +13,8 @@ function validateUserData(userData) {
   return userData;
 }
 
-/**
- * Calculates the effective droprate for items not completed by the user,
- * ignoring items that have neither_inverse = 0 or null.
- * Returns 'n/a' if there are no uncompleted items or if the sum is 0.
- */
 export function calculateEffectiveDroprateNeither(items, userData) {
-  userData = validateUserData(userData); // Ensure valid userData
-
+  userData = validateUserData(userData);
   const neitherSum = items
     .filter((i) => {
       const isUncompleted = !userData.completed_items.includes(i.id);
@@ -28,18 +22,11 @@ export function calculateEffectiveDroprateNeither(items, userData) {
       return isUncompleted && hasValidInverse;
     })
     .reduce((acc, i) => acc + i.neither_inverse, 0);
-
   return neitherSum === 0 ? 'n/a' : 1 / neitherSum;
 }
 
-/**
- * Finds the minimum drop_rate_attempts among uncompleted items,
- * ignoring items with drop_rate_attempts <= 0 (which means "no data").
- * Returns 'n/a' if there are no valid uncompleted items.
- */
 export function calculateEffectiveDroprateIndependent(items, userData) {
-  userData = validateUserData(userData); // Ensure valid userData
-
+  userData = validateUserData(userData);
   const attempts = items
     .filter((i) => {
       const isUncompleted = !userData.completed_items.includes(i.id);
@@ -47,78 +34,114 @@ export function calculateEffectiveDroprateIndependent(items, userData) {
       return isUncompleted && hasValidAttempts;
     })
     .map((i) => i.drop_rate_attempts);
-
   if (attempts.length === 0) return 'n/a';
   return Math.min(...attempts);
 }
 
-/**
- * Time to complete items under the "exact" droprate logic.
- * Returns '' if droprate is 'n/a' or completionsPerHour is 0.
- */
 export function calculateTimeToExact(items, completionsPerHour, userData) {
-  userData = validateUserData(userData); // Ensure valid userData
-
+  userData = validateUserData(userData);
   const droprate = calculateEffectiveDroprateNeither(items, userData);
   if (droprate === 'n/a' || completionsPerHour === 0) return '';
   return droprate / completionsPerHour;
 }
 
-/**
- * Time to complete items under the "independent" droprate logic.
- * Returns '' if droprate is 'n/a' or completionsPerHour is 0.
- */
 export function calculateTimeToEi(items, completionsPerHour, userData) {
-  userData = validateUserData(userData); // Ensure valid userData
-
+  userData = validateUserData(userData);
   const droprate = calculateEffectiveDroprateIndependent(items, userData);
   if (droprate === 'n/a' || completionsPerHour === 0) return '';
   return droprate / completionsPerHour;
 }
 
-/**
- * Calculates the time to next log slot, incorporating extra time.
- * - Includes extraTimeToFirstCompletion in calculations.
- * - Returns:
- *   - 'No available data' if there are no numeric (>=0) values
- *   - Otherwise, the minimum time (in hours) divided by 24 (days).
- */
-export function calculateTimeToNextLogSlot(
-  items,
-  completionsPerHour,
-  extraTimeToFirstCompletion,
-  userData
-) {
+export function calculateTimeToNextLogSlot(items, completionsPerHour, extraTimeToFirstCompletion, userData) {
   userData = validateUserData(userData);
-
-  // 1) Check if all items are completed:
-  const uncompletedItems = items.filter(
-    (item) => !userData.completed_items.includes(item.id)
-  );
+  const uncompletedItems = items.filter((item) => !userData.completed_items.includes(item.id));
   if (uncompletedItems.length === 0) {
     return 'Done!';
   }
-
-  // 2) Continue the original logic if not all items are completed:
   const valA = calculateEffectiveDroprateNeither(items, userData);
   const valB = calculateEffectiveDroprateIndependent(items, userData);
   const valC = calculateTimeToExact(items, completionsPerHour, userData);
   const valD = calculateTimeToEi(items, completionsPerHour, userData);
-
   const numericValues = [];
   [valA, valB, valC, valD].forEach((val) => {
-    // Only consider valid numeric values > 0
     if (typeof val === 'number' && val > 0) {
       numericValues.push(val);
     }
   });
-
   if (numericValues.length === 0) {
     return 'No available data';
   }
-
   const minTime = Math.min(...numericValues);
-  
-  // Include extraTimeToFirstCompletion in the calculation
   return (minTime + (extraTimeToFirstCompletion ?? 0)) / 24;
+}
+
+/* --- New functions --- */
+
+/**
+ * Finds the next fastest item name among uncompleted items.
+ */
+export function findNextFastestItemName(items, userData) {
+  userData = validateUserData(userData);
+  const uncompleted = items.filter((i) => !userData.completed_items.includes(i.id));
+  if (uncompleted.length === 0) return '-';
+  uncompleted.sort((a, b) => a.drop_rate_attempts - b.drop_rate_attempts);
+  return uncompleted[0].name || '-';
+}
+
+/**
+ * Given an activity and the current user settings, this function
+ * returns an object with the calculated time to next log slot and fastest slot name.
+ */
+export function calculateActivityData(activity, userCompletionRates, isIron, userData) {
+  // Create unified fields from activity.maps
+  const mappedItems = (Array.isArray(activity.maps) ? activity.maps : []).map((m) => ({
+    id: m.item_id,
+    name: m.item_name,
+    drop_rate_attempts: m.drop_rate_attempts,
+    neither_inverse: m.neither_inverse,
+  }));
+
+  const userRateMain = userCompletionRates[activity.activity_name]?.completions_per_hour_main;
+  const userRateIron = userCompletionRates[activity.activity_name]?.completions_per_hour_iron;
+  const defaultRateMain = activity.completions_per_hour_main ?? 0;
+  const defaultRateIron = activity.completions_per_hour_iron ?? 0;
+
+  const userExtraTimeMain = userCompletionRates[activity.activity_name]?.extra_time_to_first_completion ?? 0;
+  const userExtraTimeIron = userCompletionRates[activity.activity_name]?.extra_time_to_first_completion ?? 0;
+      
+  const defaultExtraTimeMain = activity.extra_time_to_first_completion ?? 0;
+  const defaultExtraTimeIron = activity.extra_time_to_first_completion ?? 0;
+
+  const completionsPerHour = isIron
+    ? userRateIron ?? defaultRateIron
+    : userRateMain ?? defaultRateMain;
+
+  const extraTimeToFirstCompletion = isIron
+    ? userExtraTimeIron || defaultExtraTimeIron
+    : userExtraTimeMain || defaultExtraTimeMain;
+
+  if (mappedItems.length === 0) {
+    return {
+      activity_name: activity.activity_name,
+      time_to_next_log_slot: 'No available data',
+      fastest_slot_name: '-',
+    };
+  }
+
+  const nextSlotTime = calculateTimeToNextLogSlot(
+    mappedItems,
+    completionsPerHour,
+    extraTimeToFirstCompletion,
+    userData || { completed_items: [] }
+  );
+
+  const fastestSlotName = findNextFastestItemName(mappedItems, userData || { completed_items: [] });
+
+  return {
+    activity_name: activity.activity_name,
+    time_to_next_log_slot: nextSlotTime,
+    fastest_slot_name: fastestSlotName,
+    completions_per_hour: completionsPerHour,
+    extra_time_to_first_completion: extraTimeToFirstCompletion,
+  };
 }
