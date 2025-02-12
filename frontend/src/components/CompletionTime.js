@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CSSTransition } from 'react-transition-group';
 import { calculateActivityData } from '../utils/calculations';
 import ItemImage from './ItemImage';
+// NEW: Import the items provider hook to access itemsData for images and wiki links
+import { useItemsData } from "../contexts/ItemsProvider";
 
-// DebouncedInput remains the same as before
 function DebouncedInput({ type = "text", value, onDebouncedChange, delay = 500, ...props }) {
   const [internalValue, setInternalValue] = useState(value);
   const timerRef = useRef(null);
@@ -41,6 +42,9 @@ function DebouncedInput({ type = "text", value, onDebouncedChange, delay = 500, 
 }
 
 function CompletionTime({ onRatesUpdated }) {
+  // NEW: Access itemsData from the provider
+  const itemsData = useItemsData();
+  
   const [rawActivities, setRawActivities] = useState([]);
   const [activities, setActivities] = useState([]);
   const [userData, setUserData] = useState({ completed_items: [] });
@@ -352,6 +356,14 @@ function CompletionTime({ onRatesUpdated }) {
                 : '#4A5568'
             } : {};
 
+            // Determine the wiki URL using itemsData; if not available, fall back to the generic URL based on the item name.
+            const wikiUrl =
+              itemsData &&
+              itemsData[String(act.fastest_slot_id)] &&
+              itemsData[String(act.fastest_slot_id)].wikiPageUrl
+                ? itemsData[String(act.fastest_slot_id)].wikiPageUrl
+                : `https://oldschool.runescape.wiki/w/${encodeURIComponent(act.fastest_slot_name)}`;
+
             return (
               <div key={i} className={isActive ? 'rounded-lg shadow-lg mb-4 overflow-hidden border border-white' : ''}>
                 {/* Main Row */}
@@ -369,7 +381,7 @@ function CompletionTime({ onRatesUpdated }) {
                       <span>-</span>
                     ) : (
                       <a 
-                        href={`https://oldschool.runescape.wiki/w/${encodeURIComponent(act.fastest_slot_name)}`}
+                        href={wikiUrl}
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="flex items-center justify-center space-x-2 hover:underline"

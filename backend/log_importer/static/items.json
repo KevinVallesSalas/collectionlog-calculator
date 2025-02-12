@@ -9394,5 +9394,47 @@
     "name": "Ancient remnant",
     "imageUrl": "https://oldschool.runescape.wiki/images/Ancient_remnant.png",
     "wikiPageUrl": "https://oldschool.runescape.wiki/w/Ancient_remnant"
+  },
+  "30622": {
+    "id": 30622,
+    "name": "Bran",
+    "imageUrl": "https://oldschool.runescape.wiki/images/Bran.png?dce96",
+    "wikiPageUrl": "https://oldschool.runescape.wiki/w/Bran#Bran"
+  },
+  "30626": {
+    "id": 30626,
+    "name": "Deadeye prayer scroll",
+    "imageUrl": "https://oldschool.runescape.wiki/images/Deadeye_prayer_scroll.png",
+    "wikiPageUrl": "https://oldschool.runescape.wiki/w/Deadeye_prayer_scroll"
+  },
+  "30627": {
+    "id": 30627,
+    "name": "Mystic vigour prayer scroll",
+    "imageUrl": "https://oldschool.runescape.wiki/images/Mystic_vigour_prayer_scroll.png",
+    "wikiPageUrl": "https://oldschool.runescape.wiki/w/Mystic_vigour_prayer_scroll"
+  },
+  "30637": {
+    "id": 30637,
+    "name": "Giantsoul amulet (uncharged)",
+    "imageUrl": "https://oldschool.runescape.wiki/images/Giantsoul_amulet_%28uncharged%29.png?872db",
+    "wikiPageUrl": "https://oldschool.runescape.wiki/w/Giantsoul_amulet#Uncharged"
+  },
+  "30628": {
+    "id": 30628,
+    "name": "Ice element staff crown",
+    "imageUrl": "https://oldschool.runescape.wiki/images/Ice_element_staff_crown.png",
+    "wikiPageUrl": "https://oldschool.runescape.wiki/w/Ice_element_staff_crown"
+  },
+  "30631": {
+    "id": 30631,
+    "name": "Fire element staff crown",
+    "imageUrl": "https://oldschool.runescape.wiki/images/Fire_element_staff_crown.png",
+    "wikiPageUrl": "https://oldschool.runescape.wiki/w/Fire_element_staff_crown"
+  },
+  "30640": {
+    "id": 30640,
+    "name": "Desiccated page",
+    "imageUrl": "https://oldschool.runescape.wiki/images/Desiccated_page.png",
+    "wikiPageUrl": "https://oldschool.runescape.wiki/w/Desiccated_page"
   }
 }
