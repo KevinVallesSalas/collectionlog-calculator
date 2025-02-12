@@ -130,6 +130,33 @@ body {
   border: 4px solid #1C1109; /* Slightly darker, matches OSRS */
 }
 
+/* Transition classes for opening (enter) */
+.collapse-enter {
+  max-height: 0;
+  opacity: 0;
+  transform: scale(0.95);
+}
+.collapse-enter-active {
+  max-height: 300px;
+  opacity: 1;
+  transform: scale(1);
+  transition: max-height 500ms ease-in-out, opacity 500ms ease-in-out, transform 500ms ease-in-out;
+}
+
+/* Transition classes for closing (exit) */
+.collapse-exit {
+  max-height: 300px;
+  opacity: 1;
+  transform: scale(1);
+}
+.collapse-exit-active {
+  max-height: 0;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: max-height 500ms ease-in-out, opacity 500ms ease-in-out, transform 500ms ease-in-out;
+}
+
+
 
 
 
