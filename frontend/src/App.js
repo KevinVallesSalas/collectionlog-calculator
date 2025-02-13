@@ -3,26 +3,18 @@ import './App.css';
 import FetchCollectionlogData from './components/FetchCollectionLogData';
 import CollectionLog from './components/CollectionLog';
 import CompletionTime from './components/CompletionTime';
-import CompletionRates from './components/CompletionRates';
 import { ItemsProvider } from './contexts/ItemsProvider';
 
 function App() {
   const [activeTab, setActiveTab] = useState('upload'); // Default to Upload tab
   const [refreshLog, setRefreshLog] = useState(false);
-  const [userCompletionRates, setUserCompletionRates] = useState(
+  const [userCompletionRates] = useState(
     JSON.parse(localStorage.getItem('userCompletionRates')) || {} // Load from storage
   );
 
   // Function to trigger refresh of CollectionLog on upload complete
   const handleUploadComplete = () => {
     setRefreshLog(!refreshLog); // Toggle state to refresh collection log data
-  };
-
-  // Function to update user completion rates in state and localStorage
-  const handleRatesUpdated = (newRates) => {
-    setUserCompletionRates(newRates);
-    localStorage.setItem('userCompletionRates', JSON.stringify(newRates));
-    setRefreshLog((prev) => !prev); // Force re-render when user updates rates
   };
 
   const renderTabContent = () => {
@@ -33,8 +25,6 @@ function App() {
         return <CollectionLog refreshLog={refreshLog} />;
       case 'completion':
         return <CompletionTime userCompletionRates={userCompletionRates} />;
-      case 'completion-rates':
-        return <CompletionRates onRatesUpdated={handleRatesUpdated} />;
       default:
         return <FetchCollectionlogData onUploadComplete={handleUploadComplete} />;
     }
@@ -50,7 +40,6 @@ function App() {
               { key: 'upload', label: 'Upload' },
               { key: 'collection', label: 'Collection Log' },
               { key: 'completion', label: 'Completion Time' },
-              { key: 'completion-rates', label: 'Completion Rates' },
             ].map(({ key, label }) => (
               <button
                 key={key}
