@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CSSTransition } from 'react-transition-group';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useSpring } from 'react-spring';
 import { calculateActivityData } from '../utils/calculations';
 import ItemImage from './ItemImage';
-// NEW: Import the items provider hook to access itemsData for images and wiki links
-import { useItemsData } from "../contexts/ItemsProvider";
+import { useItemsData } from '../contexts/ItemsProvider';
 
 function DebouncedInput({ type = "text", value, onDebouncedChange, delay = 500, ...props }) {
   const [internalValue, setInternalValue] = useState(value);
@@ -42,33 +42,35 @@ function DebouncedInput({ type = "text", value, onDebouncedChange, delay = 500, 
 }
 
 function CompletionTime({ onRatesUpdated }) {
-  // NEW: Access itemsData from the provider
   const itemsData = useItemsData();
-  
+
   const [rawActivities, setRawActivities] = useState([]);
   const [activities, setActivities] = useState([]);
   const [userData, setUserData] = useState({ completed_items: [] });
   const fetchedActivities = useRef(false);
 
-  // Which activity row is expanded (by activity name)
+  // Name of the currently expanded activity.
   const [expandedActivity, setExpandedActivity] = useState(null);
-  // When a section is closed, store its index temporarily.
-  const [lastActiveIndex, setLastActiveIndex] = useState(null);
-  // During closing, hide affected borders for 500ms.
-  const [hideBorders, setHideBorders] = useState(false);
+  // Ref for the active row element.
+  const activeRowRef = useRef(null);
+  // Ref for the scrollable container.
+  const listContainerRef = useRef(null);
 
-  // State for completion rates data (for inline editing)
   const [completionRates, setCompletionRates] = useState([]);
   const fetchedRates = useRef(false);
 
-  // Ref for scrolling to the expanded section
-  const expandedRef = useRef(null);
-
-  // Mode toggle from localStorage
   const [isIron, setIsIron] = useState(() => JSON.parse(localStorage.getItem('isIron')) ?? false);
   const [userToggled, setUserToggled] = useState(() => JSON.parse(localStorage.getItem('userToggledMode')) ?? false);
   const [sortConfig, setSortConfig] = useState({ key: 'time_to_next_log_slot', direction: 'asc' });
 
+  // Set up a spring for the container's scroll position.
+  // We extract the API from the spring array.
+  const [ , api ] = useSpring(() => ({
+    scroll: 0,
+    config: { duration: 500 }
+  }));
+
+  // Fetch activities data.
   useEffect(() => {
     if (fetchedActivities.current) return;
     fetchedActivities.current = true;
@@ -86,6 +88,7 @@ function CompletionTime({ onRatesUpdated }) {
     fetchActivitiesData();
   }, []);
 
+  // Load collection log data.
   useEffect(() => {
     const savedLogData = JSON.parse(localStorage.getItem('collectionLogData'));
     if (!savedLogData || !savedLogData.sections) {
@@ -93,10 +96,10 @@ function CompletionTime({ onRatesUpdated }) {
       return;
     }
     const collectedItems = [];
-    Object.values(savedLogData.sections).forEach((section) => {
-      Object.values(section).forEach((activity) => {
+    Object.values(savedLogData.sections).forEach(section => {
+      Object.values(section).forEach(activity => {
         if (activity.items && Array.isArray(activity.items)) {
-          activity.items.forEach((item) => {
+          activity.items.forEach(item => {
             if (item.obtained) {
               collectedItems.push(item.id);
             }
@@ -116,6 +119,7 @@ function CompletionTime({ onRatesUpdated }) {
     }
   }, [rawActivities, userToggled]);
 
+  // Fetch completion rates.
   useEffect(() => {
     if (fetchedRates.current) return;
     fetchedRates.current = true;
@@ -167,28 +171,27 @@ function CompletionTime({ onRatesUpdated }) {
 
   const toggleExpandedActivity = (activityName) => {
     if (expandedActivity === activityName) {
-      const index = activities.findIndex(a => a.activity_name === activityName);
-      setLastActiveIndex(index);
       setExpandedActivity(null);
     } else {
       setExpandedActivity(activityName);
-      setLastActiveIndex(null);
     }
   };
 
-  // When closing, hide the borders for the active row and the row immediately above it for 500ms.
+  // When expandedActivity changes (or activities update), calculate the target scroll position.
+  // The formula centers the active row in the container.
   useEffect(() => {
-    if (expandedActivity === null && lastActiveIndex !== null) {
-      setHideBorders(true);
-      const timer = setTimeout(() => {
-        setHideBorders(false);
-        setLastActiveIndex(null);
-      }, 500);
-      return () => clearTimeout(timer);
-    } else {
-      setHideBorders(false);
+    if (expandedActivity && activeRowRef.current && listContainerRef.current) {
+      // No delay here: we calculate using the current layout.
+      const container = listContainerRef.current;
+      const activeRow = activeRowRef.current;
+      // Standard centering formula:
+      let targetScroll = activeRow.offsetTop - (container.clientHeight / 2) + (activeRow.clientHeight / 2);
+      // Clamp targetScroll within container bounds.
+      targetScroll = Math.max(0, Math.min(targetScroll, container.scrollHeight - container.clientHeight));
+      // Animate scroll via react-spring with a fixed duration.
+      api.start({ scroll: targetScroll, config: { duration: 500 } });
     }
-  }, [expandedActivity, lastActiveIndex]);
+  }, [expandedActivity, activities, api]);
 
   useEffect(() => {
     if (!userData) return;
@@ -271,28 +274,6 @@ function CompletionTime({ onRatesUpdated }) {
     return `rgb(${r}, ${g}, 0)`;
   };
 
-  useEffect(() => {
-    if (expandedRef.current) {
-      const topOffset = 40;
-      const elementRect = expandedRef.current.getBoundingClientRect();
-      const currentScroll = window.scrollY;
-      if (elementRect.top < topOffset) {
-        const desiredScroll = expandedRef.current.offsetTop - topOffset;
-        window.scrollTo({ top: desiredScroll, behavior: 'smooth' });
-      } else {
-        const viewportHeight = window.innerHeight;
-        if (elementRect.bottom > viewportHeight) {
-          const desiredScroll = currentScroll + elementRect.top - (viewportHeight - elementRect.height) / 2;
-          window.scrollTo({ top: desiredScroll, behavior: 'smooth' });
-        }
-      }
-    }
-  }, [expandedActivity, activities]);
-
-  const activeRowIndex = expandedActivity 
-    ? activities.findIndex(a => a.activity_name === expandedActivity)
-    : lastActiveIndex;
-
   return (
     <div className="collection-log-container mx-auto my-5">
       {/* Title Section */}
@@ -305,9 +286,9 @@ function CompletionTime({ onRatesUpdated }) {
             Normal Account Completion Rates
           </span>
           <label className="relative inline-block w-12 h-6">
-            <input 
-              type="checkbox" 
-              checked={isIron} 
+            <input
+              type="checkbox"
+              checked={isIron}
               onChange={() => {
                 setIsIron(prev => {
                   const newValue = !prev;
@@ -316,7 +297,7 @@ function CompletionTime({ onRatesUpdated }) {
                   localStorage.setItem('userToggledMode', JSON.stringify(true));
                   return newValue;
                 });
-              }} 
+              }}
               className="peer sr-only"
             />
             <div className="w-full h-full bg-[#5A4736] rounded-full transition-colors duration-500"></div>
@@ -344,150 +325,156 @@ function CompletionTime({ onRatesUpdated }) {
         </div>
       </div>
 
-      {/* Activity Rows */}
-      {activities.length > 0 ? (
-        <div>
-          {activities.map((act, i) => {
-            const rate = completionRates.find(r => r.activity_name === act.activity_name);
-            const isActive = act.activity_name === expandedActivity;
-            const mainRowStyle = !isActive ? {
-              borderBottomColor: (activeRowIndex !== null && (i === activeRowIndex || i === activeRowIndex - 1) && hideBorders)
-                ? 'transparent'
-                : '#4A5568'
-            } : {};
-
-            // Determine the wiki URL using itemsData; if not available, fall back to the generic URL based on the item name.
-            const wikiUrl =
-              itemsData &&
-              itemsData[String(act.fastest_slot_id)] &&
-              itemsData[String(act.fastest_slot_id)].wikiPageUrl
-                ? itemsData[String(act.fastest_slot_id)].wikiPageUrl
-                : `https://oldschool.runescape.wiki/w/${encodeURIComponent(act.fastest_slot_name)}`;
-
-            return (
-              <div key={i} className={isActive ? 'rounded-lg shadow-lg mb-4 overflow-hidden border border-white' : ''}>
-                {/* Main Row */}
+      {/* Scrollable container for the activity rows */}
+      <div
+        ref={listContainerRef}
+        className="overflow-y-auto scrollable-container"
+        style={{ height: '90vh', maxHeight: '750px' }}
+      >
+        {activities.length > 0 ? (
+          <div>
+            {activities.map((act) => {
+              const rate = completionRates.find(r => r.activity_name === act.activity_name);
+              const isActive = act.activity_name === expandedActivity;
+              // Attach the ref only to the active row.
+              const rowRef = isActive ? activeRowRef : null;
+              const wikiUrl =
+                itemsData &&
+                itemsData[String(act.fastest_slot_id)] &&
+                itemsData[String(act.fastest_slot_id)].wikiPageUrl
+                  ? itemsData[String(act.fastest_slot_id)].wikiPageUrl
+                  : `https://oldschool.runescape.wiki/w/${encodeURIComponent(act.fastest_slot_name)}`;
+              return (
                 <div
-                  className={`grid grid-cols-3 gap-x-4 py-2 items-center cursor-pointer px-4 transition-colors duration-500 ${isActive ? 'bg-[#5A4736] rounded-t-lg' : 'bg-[#3B2C1A] border-b'}`}
-                  onClick={() => toggleExpandedActivity(act.activity_name)}
-                  style={!isActive ? mainRowStyle : {}}
+                  key={act.activity_name}
+                  ref={rowRef}
+                  className="snap-center rounded-lg shadow-lg mb-4 overflow-hidden border border-white"
                 >
-                  <div className="text-center">{act.activity_name}</div>
-                  <div className="text-center" style={{ color: getTimeColor(act.time_to_next_log_slot) }}>
-                    {formatTimeInHMS(act.time_to_next_log_slot)}
-                  </div>
-                  <div className="text-center">
-                    {act.fastest_slot_name === '-' ? (
-                      <span>-</span>
-                    ) : (
-                      <a 
-                        href={wikiUrl}
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center space-x-2 hover:underline"
-                      >
-                        {act.fastest_slot_id && (
-                          <ItemImage 
-                            itemId={act.fastest_slot_id}
-                            fallbackName={act.fastest_slot_name}
-                            className="w-8 h-8"
-                          />
-                        )}
-                        <span>{act.fastest_slot_name}</span>
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                {/* Animated Detail Section with animated transitions */}
-                <CSSTransition
-                  in={isActive}
-                  timeout={500}
-                  classNames="collapse"
-                  unmountOnExit
-                  nodeRef={isActive ? expandedRef : null}
-                >
-                  <div ref={isActive ? expandedRef : null} className="detail-section px-4 rounded-b-lg">
-                    <div className="py-2">
-                      {/* Editable fields */}
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className={`flex flex-col items-center gap-2 border rounded p-1 transition-colors duration-300 ${!isIron ? 'border-yellow-300' : 'border-transparent'}`}>
-                          <label className={`block text-sm font-semibold text-center transition-colors duration-300 ${!isIron ? 'text-yellow-300' : 'text-[#c4b59e]'}`}>
-                            Completions/hr (Main):
-                          </label>
-                          <DebouncedInput
-                            type="number"
-                            value={rate ? rate.user_completions_per_hour_main : ''}
-                            onDebouncedChange={(newVal) =>
-                              handleRateChange(act.activity_name, 'user_completions_per_hour_main', Number(newVal))
-                            }
-                            min="0"
-                            className="border p-1 rounded text-center bg-[#d2b48c] text-black"
-                            title={rate ? `Default: ${rate.default_completions_per_hour_main}` : ''}
-                          />
-                        </div>
-                        <div className={`flex flex-col items-center gap-2 border rounded p-1 transition-colors duration-300 ${isIron ? 'border-yellow-300' : 'border-transparent'}`}>
-                          <label className={`block text-sm font-semibold text-center transition-colors duration-300 ${isIron ? 'text-yellow-300' : 'text-[#c4b59e]'}`}>
-                            Completions/hr (Iron):
-                          </label>
-                          <DebouncedInput
-                            type="number"
-                            value={rate ? rate.user_completions_per_hour_iron : ''}
-                            onDebouncedChange={(newVal) =>
-                              handleRateChange(act.activity_name, 'user_completions_per_hour_iron', Number(newVal))
-                            }
-                            min="0"
-                            className="border p-1 rounded text-center bg-[#d2b48c] text-black"
-                            title={rate ? `Default: ${rate.default_completions_per_hour_iron}` : ''}
-                          />
-                        </div>
-                        <div className="flex flex-col items-center gap-2">
-                          <label className="block text-sm font-semibold text-center text-[#c4b59e]">
-                            Extra Time (hrs):
-                          </label>
-                          <DebouncedInput
-                            type="number"
-                            value={rate ? rate.user_extra_time : ''}
-                            onDebouncedChange={(newVal) =>
-                              handleRateChange(act.activity_name, 'user_extra_time', Number(newVal))
-                            }
-                            min="0"
-                            className="border p-1 rounded text-center bg-[#d2b48c] text-black"
-                            title={rate ? `Default: ${rate.default_extra_time} hours` : ''}
-                          />
-                        </div>
-                      </div>
-                      {/* Non-editable fields */}
-                      <div className="grid grid-cols-2 gap-4 mt-2">
-                        <div>
-                          <label className="block text-sm font-semibold text-center text-[#c4b59e]">
-                            Notes:
-                          </label>
-                          <div className="border p-1 rounded bg-[#d2b48c] text-center text-black">
-                            {rate ? rate.notes || '-' : '-'}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-center text-[#c4b59e]">
-                            Verification Source:
-                          </label>
-                          <div className="border p-1 rounded bg-[#d2b48c] text-center text-black">
-                            {rate ? rate.verification_source || '-' : '-'}
-                          </div>
-                        </div>
-                      </div>
+                  {/* Main Row */}
+                  <div
+                    className="grid grid-cols-3 gap-x-4 py-2 items-center cursor-pointer px-4 transition-colors duration-500 bg-[#3B2C1A] border-b"
+                    onClick={() => toggleExpandedActivity(act.activity_name)}
+                  >
+                    <div className="text-center">{act.activity_name}</div>
+                    <div className="text-center" style={{ color: getTimeColor(act.time_to_next_log_slot) }}>
+                      {formatTimeInHMS(act.time_to_next_log_slot)}
+                    </div>
+                    <div className="text-center">
+                      {act.fastest_slot_name === '-' ? (
+                        <span>-</span>
+                      ) : (
+                        <a
+                          href={wikiUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center space-x-2 transition-transform duration-200 hover:scale-105 hover:underline"
+                        >
+                          {act.fastest_slot_id && (
+                            <ItemImage
+                              itemId={act.fastest_slot_id}
+                              fallbackName={act.fastest_slot_name}
+                              className="w-8 h-8"
+                              disableLink={true}
+                            />
+                          )}
+                          <span>{act.fastest_slot_name}</span>
+                        </a>
+                      )}
                     </div>
                   </div>
-                </CSSTransition>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="py-4 text-center text-yellow-300">
-          No data available. Please upload a collection log.
-        </p>
-      )}
+
+                  {/* Detail Section using Framer Motion */}
+                  <AnimatePresence>
+                    {isActive && (
+                      <motion.div
+                        key={act.activity_name}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.5, ease: "easeInOut" }}
+                        className="detail-section px-4 rounded-b-lg overflow-hidden"
+                      >
+                        <div className="py-2">
+                          <div className="grid grid-cols-3 gap-4">
+                            <div className={`flex flex-col items-center gap-2 border rounded p-1 ${!isIron ? 'border-yellow-300' : 'border-transparent'}`}>
+                              <label className={`block text-sm font-semibold text-center ${!isIron ? 'text-yellow-300' : 'text-[#c4b59e]'}`}>
+                                Completions/hr (Main):
+                              </label>
+                              <DebouncedInput
+                                type="number"
+                                value={rate ? rate.user_completions_per_hour_main : ''}
+                                onDebouncedChange={(newVal) =>
+                                  handleRateChange(act.activity_name, 'user_completions_per_hour_main', Number(newVal))
+                                }
+                                min="0"
+                                className="border p-1 rounded text-center bg-[#d2b48c] text-black"
+                                title={rate ? `Default: ${rate.default_completions_per_hour_main}` : ''}
+                              />
+                            </div>
+                            <div className={`flex flex-col items-center gap-2 border rounded p-1 ${isIron ? 'border-yellow-300' : 'border-transparent'}`}>
+                              <label className={`block text-sm font-semibold text-center ${isIron ? 'text-yellow-300' : 'text-[#c4b59e]'}`}>
+                                Completions/hr (Iron):
+                              </label>
+                              <DebouncedInput
+                                type="number"
+                                value={rate ? rate.user_completions_per_hour_iron : ''}
+                                onDebouncedChange={(newVal) =>
+                                  handleRateChange(act.activity_name, 'user_completions_per_hour_iron', Number(newVal))
+                                }
+                                min="0"
+                                className="border p-1 rounded text-center bg-[#d2b48c] text-black"
+                                title={rate ? `Default: ${rate.default_completions_per_hour_iron}` : ''}
+                              />
+                            </div>
+                            <div className="flex flex-col items-center gap-2">
+                              <label className="block text-sm font-semibold text-center text-[#c4b59e]">
+                                Extra Time (hrs):
+                              </label>
+                              <DebouncedInput
+                                type="number"
+                                value={rate ? rate.user_extra_time : ''}
+                                onDebouncedChange={(newVal) =>
+                                  handleRateChange(act.activity_name, 'user_extra_time', Number(newVal))
+                                }
+                                min="0"
+                                className="border p-1 rounded text-center bg-[#d2b48c] text-black"
+                                title={rate ? `Default: ${rate.default_extra_time} hours` : ''}
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 mt-2">
+                            <div>
+                              <label className="block text-sm font-semibold text-center text-[#c4b59e]">
+                                Notes:
+                              </label>
+                              <div className="border p-1 rounded bg-[#d2b48c] text-center text-black">
+                                {rate ? rate.notes || '-' : '-'}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold text-center text-[#c4b59e]">
+                                Verification Source:
+                              </label>
+                              <div className="border p-1 rounded bg-[#d2b48c] text-center text-black">
+                                {rate ? rate.verification_source || '-' : '-'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="py-4 text-center text-yellow-300">
+            No data available. Please upload a collection log.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,18 +1,18 @@
 import React from 'react';
 import { useItemsData } from '../contexts/ItemsProvider';
 
-const ItemImage = ({ itemId, fallbackName, alt, fallbackSrc = "/fallback.png", ...props }) => {
+const ItemImage = ({ itemId, fallbackName, alt, fallbackSrc = "/fallback.png", disableLink, ...props }) => {
   // Get the full items dictionary from context
   const itemsData = useItemsData();
 
-  // Look up the item by its ID (converted to string, since keys are strings)
+  // Look up the item by its ID (keys are strings)
   const itemEntry = itemsData ? itemsData[String(itemId)] : null;
   
   // Use the imageUrl and wikiPageUrl from the itemEntry; fallback to our fallbackSrc if none found
   const imageUrl = itemEntry && itemEntry.imageUrl ? itemEntry.imageUrl : fallbackSrc;
   const wikiPageUrl = itemEntry && itemEntry.wikiPageUrl ? itemEntry.wikiPageUrl : null;
   
-  // For the alt attribute, prefer the itemEntry's name; if not, use fallbackName or a default.
+  // For the alt attribute, prefer the itemEntry's name; otherwise, use fallbackName or a default.
   const altText = alt || (itemEntry && itemEntry.name) || fallbackName || "Item image";
 
   const handleError = (e) => {
@@ -44,10 +44,9 @@ const ItemImage = ({ itemId, fallbackName, alt, fallbackSrc = "/fallback.png", .
     />
   );
 
-  // If a wikiPageUrl is available, wrap the image in a link.
   return (
     <div className="relative w-12 h-12 flex items-center justify-center overflow-hidden">
-      {wikiPageUrl ? (
+      {(!disableLink && wikiPageUrl) ? (
         <a href={wikiPageUrl} target="_blank" rel="noopener noreferrer">
           {imageElement}
         </a>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ItemImage from "./ItemImage";
-import { preloadImages } from "../utils/preloadImages"; // update if needed
-import { useItemsData } from "../contexts/ItemsProvider"; // NEW: import the hook
+// You can keep the import if other components need it, otherwise remove it:
+// import { useItemsData } from "../contexts/ItemsProvider";
 
 function CollectionLog() {
   const [logData, setLogData] = useState(null);
@@ -14,10 +14,7 @@ function CollectionLog() {
   });
   const [tooltip, setTooltip] = useState({ visible: false, text: "", x: 0, y: 0 });
 
-  // Access the items.json data from context (which contains imageUrl and wikiPageUrl)
-  const itemsData = useItemsData();
-
-  // 1) Load localStorage data for collection log
+  // 1) Load collection log data from localStorage
   useEffect(() => {
     const savedData = JSON.parse(localStorage.getItem("collectionLogData"));
     if (savedData) {
@@ -30,34 +27,7 @@ function CollectionLog() {
     }
   }, [activeSection]);
 
-  // 2) Whenever groupedItems changes, build an array of { name, url } and preload them
-  // (Optional: If you want to keep preloading logic, you could adjust it to use the new itemsData too.)
-  useEffect(() => {
-    if (groupedItems && Object.keys(groupedItems).length > 0) {
-      const allItemEntries = [];
-      // Loop over every subsection of every section
-      Object.values(groupedItems).forEach((subSections) => {
-        Object.values(subSections).forEach((subsectionObj) => {
-          const items = subsectionObj.items || [];
-          items.forEach((item) => {
-            // If itemsData is available, use the imageUrl from it;
-            // otherwise, fallback to the old guess-based URL.
-            let url;
-            if (itemsData && itemsData[String(item.id)] && itemsData[String(item.id)].imageUrl) {
-              url = itemsData[String(item.id)].imageUrl;
-            } else {
-              const imageFileName = item.name.replace(/\s+/g, "_") + ".png";
-              url = `https://oldschool.runescape.wiki/images/${imageFileName}`;
-            }
-            allItemEntries.push({ name: item.name, url });
-          });
-        });
-      });
-      preloadImages(allItemEntries);
-    }
-  }, [groupedItems, itemsData]);
-
-  // 3) Update subsections list whenever activeSection or groupedItems changes
+  // 2) Update activeSubsection whenever activeSection or groupedItems changes
   useEffect(() => {
     if (groupedItems[activeSection]) {
       const subs = Object.keys(groupedItems[activeSection]);
@@ -65,7 +35,7 @@ function CollectionLog() {
     }
   }, [activeSection, groupedItems]);
 
-  // 4) Handle window resize
+  // 3) Handle window resize
   useEffect(() => {
     const handleResize = () => {
       setWindowSize({ width: window.innerWidth, height: window.innerHeight });
@@ -216,7 +186,6 @@ function CollectionLog() {
                       }}
                       onMouseLeave={() => setTooltip({ visible: false, text: "", x: 0, y: 0 })}
                     >
-                      {/* Use the updated ItemImage component with itemId and fallbackName */}
                       <ItemImage
                         itemId={item.id}
                         fallbackName={item.name}

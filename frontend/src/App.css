@@ -10,14 +10,14 @@
 
 body {
   font-family: 'Runescape', sans-serif;
-  background-color: #18120F; /* Darker OSRS-like background */
-  color: #c4b59e; /* Beige text */
+  background-color: #18120F;
+  color: #c4b59e;
 }
 
 /* Collection Log UI */
 .collection-log-container {
   max-width: 900px;
-  background-color: #3A2A1B; /* Dark brown OSRS box */
+  background-color: #3A2A1B;
   border: 4px solid #2A1E14;
   padding: 15px;
   border-radius: 8px;
@@ -33,7 +33,7 @@ body {
 
 .boss-list button {
   font-size: 14px;
-  color: #ffcc80; /* Lighter yellow text */
+  color: #ffcc80;
   padding: 5px;
 }
 
@@ -71,20 +71,20 @@ body {
 
 /* Custom Scrollbar Styling */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px; /* Thinner scrollbar */
+  width: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #2A1E14; /* Dark background */
+  background: #2A1E14;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #7a5c3e; /* Brown OSRS-style scrollbar */
+  background: #7a5c3e;
   border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #9b7a5c; /* Lighter brown on hover */
+  background: #9b7a5c;
 }
 
 /* Custom OSRS Tabs */
@@ -127,36 +127,17 @@ body {
 
 /* Darker Uniform Border */
 .border-uniform {
-  border: 4px solid #1C1109; /* Slightly darker, matches OSRS */
+  border: 4px solid #1C1109;
 }
 
-/* Transition classes for opening (enter) */
-.collapse-enter {
-  max-height: 0;
-  opacity: 0;
-  transform: scale(0.95);
-}
-.collapse-enter-active {
-  max-height: 300px;
-  opacity: 1;
-  transform: scale(1);
-  transition: max-height 500ms ease-in-out, opacity 500ms ease-in-out, transform 500ms ease-in-out;
+.scrollable-container {
+  scroll-behavior: smooth;
+  scroll-snap-type: y mandatory;
 }
 
-/* Transition classes for closing (exit) */
-.collapse-exit {
-  max-height: 300px;
-  opacity: 1;
-  transform: scale(1);
+.snap-center {
+  scroll-snap-align: center;
 }
-.collapse-exit-active {
-  max-height: 0;
-  opacity: 0;
-  transform: scale(0.95);
-  transition: max-height 500ms ease-in-out, opacity 500ms ease-in-out, transform 500ms ease-in-out;
-}
-
-
 
 
 

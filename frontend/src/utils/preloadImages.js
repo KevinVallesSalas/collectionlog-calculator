@@ -2,28 +2,34 @@
  * Preloads images for an array of { name, url } entries,
  * and saves failures to localStorage.
  *
+ * Returns a promise that resolves when all images have either loaded or failed.
+ *
  * @param {{ name: string, url: string }[]} items - The item name + URL pairs to preload.
+ * @returns {Promise<Array<{ name: string, url: string, status: string }>>}
  */
 export function preloadImages(items) {
-    // Load existing failures from localStorage or start fresh
-    let failedImages = JSON.parse(localStorage.getItem("failedImageUrls")) || {};
-  
-    items.forEach(({ name, url }) => {
+  let failedImages = JSON.parse(localStorage.getItem("failedImageUrls")) || {};
+
+  const loadPromises = items.map(({ name, url }) =>
+    new Promise((resolve) => {
       const img = new Image();
-  
-      // If it fails to load, store it in localStorage
-      img.onerror = () => {
-        console.error(`Failed to preload: ${url}`);
-        // Store in an object keyed by the item name
-        // so it's easy to see which item is failing
-        failedImages[name] = url;
-        
-        // Write it back to localStorage
-        localStorage.setItem("failedImageUrls", JSON.stringify(failedImages));
+
+      img.onload = () => {
+        // Successfully loaded image; resolve silently.
+        resolve({ name, url, status: "loaded" });
       };
-  
-      // Trigger the load
+
+      img.onerror = () => {
+        // Log only failures.
+        console.error(`Failed to preload: ${url}`);
+        failedImages[name] = url;
+        localStorage.setItem("failedImageUrls", JSON.stringify(failedImages));
+        resolve({ name, url, status: "failed" });
+      };
+
       img.src = url;
-    });
-  }
-  
+    })
+  );
+
+  return Promise.all(loadPromises);
+}
