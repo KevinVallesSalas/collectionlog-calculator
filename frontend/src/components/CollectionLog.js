@@ -55,7 +55,6 @@ function CollectionLog() {
   const mainContentWidth = containerWidth * 0.7 - 24;
 
   // Approximate how much vertical space is left after header/tabs, etc.
-  // Adjust these values as needed to fine-tune:
   const headerHeight = 32;
   const tabsHeight = 36;
   const borderHeight = 4;       // top/bottom border in your container
@@ -64,12 +63,10 @@ function CollectionLog() {
     containerHeight - (headerHeight + tabsHeight + borderHeight + mainContentPadding);
 
   // 1) Item size based on width
-  //    total horizontal gap = (columns - 1) * gapSize
   const totalHorizontalGap = (columns - 1) * gapSize;
   const itemSizeByWidth = (mainContentWidth - totalHorizontalGap) / columns;
 
   // 2) Item size based on height (for ~5.5 rows)
-  //    total vertical gap = (rowCount - 1) * gapSize
   const totalVerticalGap = (rowCount - 1) * gapSize;
   const itemSizeByHeight = (leftoverHeight - totalVerticalGap) / rowCount;
 
@@ -101,10 +98,10 @@ function CollectionLog() {
         style={{
           width: containerWidth,
           height: containerHeight,
-          borderColor: "#5c5647",      // Tiny border
-          backgroundColor: "#494034",  // Main background
-          color: "#fc961f",            // Default text color
-          textShadow: "1px 1px 0 #000" // Slight drop shadow on all text
+          borderColor: "#5c5647",
+          backgroundColor: "#494034",
+          color: "#fc961f",
+          textShadow: "1px 1px 0 #000"
         }}
       >
         {/* Header */}
@@ -130,11 +127,7 @@ function CollectionLog() {
                   flex-1 px-3 py-2 text-sm uppercase font-bold
                   border border-[#5c5647] border-b-0
                   rounded-t-xl
-                  ${
-                    active
-                      ? "bg-[#3e3529]" // Active tab color
-                      : "bg-[#28251e]" // Inactive tab color
-                  }
+                  ${active ? "bg-[#3e3529]" : "bg-[#28251e]"}
                 `}
                 style={{ color: "#fc961f" }}
               >
@@ -174,10 +167,10 @@ function CollectionLog() {
 
                   // Row background color
                   const rowBackground = isSelected
-                    ? "#6f675e" // selected subsection
+                    ? "#6f675e"
                     : index % 2 === 0
-                    ? "#453c31" // even row
-                    : "#564d42"; // odd row
+                    ? "#453c31"
+                    : "#564d42";
 
                   return (
                     <li
@@ -220,51 +213,71 @@ function CollectionLog() {
           >
             {activeSubsection && groupedItems[activeSection][activeSubsection] ? (
               <>
-                {/* Subsection Name */}
-                <h2 className="font-bold text-base mb-1" style={{ color: "#fc961f" }}>
-                  {activeSubsection}
-                </h2>
+                {/* 
+                  Full-width border container:
+                  - Negative horizontal margin to cancel the .p-3 (which is ~0.75rem)
+                  - Re-add horizontal padding inside so text is still aligned
+                  - Add a bottom margin for spacing
+                */}
+                <div
+                  style={{
+                    margin: "0 -0.75rem",
+                    padding: "0.5rem 0.75rem",
+                    borderBottom: "1px solid #5c5647",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  {/* Subsection Name */}
+                  <h2 className="font-bold text-base mb-1" style={{ color: "#fc961f" }}>
+                    {activeSubsection}
+                  </h2>
 
-                {/* Obtained Count */}
-                {(() => {
-                  const items = groupedItems[activeSection][activeSubsection]?.items || [];
-                  const obtainedCount = items.filter((item) => item.obtained).length;
-                  const totalItems = items.length;
-                  let obtainedColor = "#fc961f";
-                  if (obtainedCount === 0) obtainedColor = "#ff0000";
-                  if (obtainedCount === totalItems && totalItems > 0) obtainedColor = "#00ff00";
+                  {/* Obtained Count */}
+                  {(() => {
+                    const items =
+                      groupedItems[activeSection][activeSubsection]?.items || [];
+                    const obtainedCount = items.filter((item) => item.obtained).length;
+                    const totalItems = items.length;
 
-                  return (
-                    <p className="mb-1">
-                      Obtained:{" "}
-                      <span style={{ color: obtainedColor }}>
-                        {obtainedCount}/{totalItems}
-                      </span>
-                    </p>
-                  );
-                })()}
+                    // Determine color
+                    let obtainedColor = "#a50000"; // For 0 items
+                    if (obtainedCount === totalItems && totalItems > 0) {
+                      obtainedColor = "#00ff00"; // All items
+                    } else if (obtainedCount > 0 && obtainedCount < totalItems) {
+                      obtainedColor = "#f1f100"; // Partial
+                    }
 
-                {/* Kill Count */}
-                {(() => {
-                  const killCount =
-                    groupedItems[activeSection][activeSubsection]?.killCount || {};
-                  if (killCount.name && killCount.amount > 0) {
                     return (
-                      <p className="mb-2">
-                        {killCount.name}: {killCount.amount}
+                      <p className="mb-1">
+                        Obtained:{" "}
+                        <span style={{ color: obtainedColor }}>
+                          {obtainedCount}/{totalItems}
+                        </span>
                       </p>
                     );
-                  }
-                  return null;
-                })()}
+                  })()}
+
+                  {/* Kill Count */}
+                  {(() => {
+                    const killCount =
+                      groupedItems[activeSection][activeSubsection]?.killCount || {};
+                    if (killCount.name && killCount.amount > 0) {
+                      return (
+                        <p className="mb-0">
+                          <span style={{ color: "#fc961f" }}>{killCount.name}:</span>{" "}
+                          <span style={{ color: "#ffffff" }}>{killCount.amount}</span>
+                        </p>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
 
                 {/* Items Grid */}
                 <div
                   className="grid gap-1"
                   style={{
-                    // Force 6 columns at the computed itemSize
                     gridTemplateColumns: `repeat(${columns}, ${itemSize}px)`,
-                    // Also fix row height so they're square
                     gridAutoRows: `${itemSize}px`,
                   }}
                 >
@@ -294,12 +307,18 @@ function CollectionLog() {
                         <ItemImage
                           itemId={item.id}
                           fallbackName={item.name}
-                          // Dim if not obtained
                           className={item.obtained ? "opacity-100" : "opacity-30"}
                           style={{ width: "100%", height: "100%" }}
                         />
-                        {item.quantity > 0 && (
-                          <span className="absolute top-0 left-0 bg-black bg-opacity-75 text-yellow-200 text-xs font-bold px-1 rounded">
+                        {/* Show quantity only if greater than 1, using color "#f1f100" */}
+                        {item.quantity > 1 && (
+                          <span
+                            className="absolute top-0 left-0 text-xs font-bold px-1"
+                            style={{
+                              color: "#f1f100",
+                              textShadow: "2px 2px 2px rgba(0, 0, 0, 0.5)",
+                            }}
+                          >
                             {item.quantity}
                           </span>
                         )}
