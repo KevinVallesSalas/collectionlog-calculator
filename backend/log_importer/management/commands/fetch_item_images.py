@@ -49,30 +49,25 @@ class Command(BaseCommand):
         self.stdout.write(f"Loaded items.json with {total_items} items.")
 
         updated_count = 0
+        default_wiki_url = "https://oldschool.runescape.wiki/"
 
         for idx, key in enumerate(all_keys, start=1):
             item = items_data[key]
             item_id = item["id"]
             item_name = item["name"]
 
-            # Skip if an image is already set.
-            if item.get("imageUrl"):
-                self.stdout.write(
-                    f"[{idx}/{total_items}] '{item_name}' => already has imageUrl, skipping."
-                )
-                continue
-
-            self.stdout.write(f"\n[{idx}/{total_items}] Processing ID={item_id}, name='{item_name}'...")
-
-            # 0) Check for manual override first.
+            # ----------------------------------------------------------------
+            # STEP 0) Check for manual override for both imageUrl and wikiPageUrl.
+            # ----------------------------------------------------------------
             manual_override = manual_updates.get(str(item_id)) or manual_updates.get(item_id)
-            if manual_override and manual_override.get("imageUrl"):
-                item["imageUrl"] = manual_override["imageUrl"]
-                if manual_override.get("wikiPageUrl") and not item.get("wikiPageUrl"):
+            if manual_override:
+                if manual_override.get("imageUrl"):
+                    item["imageUrl"] = manual_override["imageUrl"]
+                if manual_override.get("wikiPageUrl"):
                     item["wikiPageUrl"] = manual_override["wikiPageUrl"]
                 updated_count += 1
                 self.stdout.write(self.style.SUCCESS(
-                    f" => [Manual Override] Applied imageUrl: {manual_override['imageUrl']}"
+                    f"[{idx}/{total_items}] {item_name} => [Manual Override] Applied updates: imageUrl: {manual_override.get('imageUrl')}, wikiPageUrl: {manual_override.get('wikiPageUrl')}"
                 ))
                 # Remove the entry so it isn’t used on subsequent runs.
                 if str(item_id) in manual_updates:
@@ -83,7 +78,18 @@ class Command(BaseCommand):
                 continue
 
             # ----------------------------------------------------------------
-            # STEP 1) Lookup page title and URL from item ID.
+            # STEP 1) Skip items that already have an image and a non-default wikiPageUrl.
+            # ----------------------------------------------------------------
+            if item.get("imageUrl") and item.get("wikiPageUrl", "") != default_wiki_url:
+                self.stdout.write(
+                    f"[{idx}/{total_items}] {item_name} => already has imageUrl and wikiPageUrl updated, skipping."
+                )
+                continue
+
+            self.stdout.write(f"\n[{idx}/{total_items}] Processing ID={item_id}, name='{item_name}'...")
+
+            # ----------------------------------------------------------------
+            # STEP 2) Lookup page title and URL from item ID.
             # ----------------------------------------------------------------
             page_title, final_url = self.get_page_title_for_item(item_id)
             if final_url:
@@ -101,7 +107,7 @@ class Command(BaseCommand):
                 continue
 
             # ----------------------------------------------------------------
-            # STEP 2) Guess-based approach using page_title.
+            # STEP 3) Guess-based approach using page_title.
             # ----------------------------------------------------------------
             guess_url = self.try_guess_url(page_title)
             if guess_url:
@@ -112,7 +118,7 @@ class Command(BaseCommand):
                 continue
 
             # ----------------------------------------------------------------
-            # STEP 3) HTML Infobox parse.
+            # STEP 4) HTML Infobox parse.
             # ----------------------------------------------------------------
             infobox_url = self.parse_infobox_image(page_title)
             if infobox_url:
@@ -123,7 +129,7 @@ class Command(BaseCommand):
                 continue
 
             # ----------------------------------------------------------------
-            # STEP 4) Fuzzy approach (with higher threshold) using page_title.
+            # STEP 5) Fuzzy approach (with higher threshold) using page_title.
             # ----------------------------------------------------------------
             fuzzy_url = self.fuzzy_lookup(page_title, item_name, min_ratio=0.7)
             if fuzzy_url:
@@ -149,6 +155,22 @@ class Command(BaseCommand):
 
         # Save the updated items.json.
         self.save_items_json(items_json_path, items_data)
+
+        # ----------------------------------------------------------------
+        # ALSO add items with the default wiki page URL to manual_updates.
+        # ----------------------------------------------------------------
+        for key, item in items_data.items():
+            wiki_url = item.get("wikiPageUrl", "")
+            # Check if the wikiPageUrl is exactly the default
+            if wiki_url == default_wiki_url:
+                item_id = item["id"]
+                # Only add if not already present in manual_updates
+                if not (manual_updates.get(str(item_id)) or manual_updates.get(item_id)):
+                    manual_updates[str(item_id)] = {
+                        "name": item["name"],
+                        "imageUrl": item.get("imageUrl", ""),
+                        "wikiPageUrl": wiki_url
+                    }
 
         # Write out the manual_updates file with any remaining entries.
         with open(manual_updates_path, "w", encoding="utf-8") as f:
@@ -198,7 +220,7 @@ class Command(BaseCommand):
 
         headers = {
             "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                           "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"),
+                           "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/1080.0.0.0 Safari/537.36"),
             "Referer": "https://oldschool.runescape.wiki/"
         }
 
@@ -221,7 +243,7 @@ class Command(BaseCommand):
         self.stdout.write(f"[DEBUG] Parsing infobox HTML at: {url}")
         headers = {
             "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                           "(KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"),
+                           "(KHTML, like Gecko) Chrome/1080.0.0.0 Safari/537.36"),
             "Referer": "https://oldschool.runescape.wiki/"
         }
         try:
@@ -261,7 +283,7 @@ class Command(BaseCommand):
         }
         headers = {
             "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                           "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"),
+                           "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/1080.0.0.0 Safari/537.36"),
             "Referer": "https://oldschool.runescape.wiki/"
         }
         try:
