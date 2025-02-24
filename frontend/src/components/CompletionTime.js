@@ -49,11 +49,8 @@ function CompletionTime({ onRatesUpdated }) {
   const [userData, setUserData] = useState({ completed_items: [] });
   const fetchedActivities = useRef(false);
 
-  // Name of the currently expanded activity.
   const [expandedActivity, setExpandedActivity] = useState(null);
-  // Ref for the active row element.
   const activeRowRef = useRef(null);
-  // Ref for the scrollable container.
   const listContainerRef = useRef(null);
 
   const [completionRates, setCompletionRates] = useState([]);
@@ -63,14 +60,13 @@ function CompletionTime({ onRatesUpdated }) {
   const [userToggled, setUserToggled] = useState(() => JSON.parse(localStorage.getItem('userToggledMode')) ?? false);
   const [sortConfig, setSortConfig] = useState({ key: 'time_to_next_log_slot', direction: 'asc' });
 
-  // Set up a spring for the container's scroll position.
-  // We extract the API from the spring array.
+  // React-spring for smooth scrolling
   const [ , api ] = useSpring(() => ({
     scroll: 0,
     config: { duration: 500 }
   }));
 
-  // Fetch activities data.
+  // Fetch activities data
   useEffect(() => {
     if (fetchedActivities.current) return;
     fetchedActivities.current = true;
@@ -88,7 +84,7 @@ function CompletionTime({ onRatesUpdated }) {
     fetchActivitiesData();
   }, []);
 
-  // Load collection log data.
+  // Load collection log data
   useEffect(() => {
     const savedLogData = JSON.parse(localStorage.getItem('collectionLogData'));
     if (!savedLogData || !savedLogData.sections) {
@@ -119,7 +115,7 @@ function CompletionTime({ onRatesUpdated }) {
     }
   }, [rawActivities, userToggled]);
 
-  // Fetch completion rates.
+  // Fetch completion rates
   useEffect(() => {
     if (fetchedRates.current) return;
     fetchedRates.current = true;
@@ -152,6 +148,7 @@ function CompletionTime({ onRatesUpdated }) {
     fetchCompletionRates();
   }, []);
 
+  // Handle changes to custom completion rates
   const handleRateChange = (activityName, key, value) => {
     const updatedRates = completionRates.map(rate =>
       rate.activity_name === activityName ? { ...rate, [key]: value } : rate
@@ -169,6 +166,7 @@ function CompletionTime({ onRatesUpdated }) {
     if (onRatesUpdated) onRatesUpdated(storedRates);
   };
 
+  // Toggle the expanded activity
   const toggleExpandedActivity = (activityName) => {
     if (expandedActivity === activityName) {
       setExpandedActivity(null);
@@ -177,22 +175,18 @@ function CompletionTime({ onRatesUpdated }) {
     }
   };
 
-  // When expandedActivity changes (or activities update), calculate the target scroll position.
-  // The formula centers the active row in the container.
+  // Smooth scroll to the expanded activity row
   useEffect(() => {
     if (expandedActivity && activeRowRef.current && listContainerRef.current) {
-      // No delay here: we calculate using the current layout.
       const container = listContainerRef.current;
       const activeRow = activeRowRef.current;
-      // Standard centering formula:
       let targetScroll = activeRow.offsetTop - (container.clientHeight / 2) + (activeRow.clientHeight / 2);
-      // Clamp targetScroll within container bounds.
       targetScroll = Math.max(0, Math.min(targetScroll, container.scrollHeight - container.clientHeight));
-      // Animate scroll via react-spring with a fixed duration.
       api.start({ scroll: targetScroll, config: { duration: 500 } });
     }
   }, [expandedActivity, activities, api]);
 
+  // Re-sort activities whenever relevant data changes
   useEffect(() => {
     if (!userData) return;
     const ratesMapping = completionRates.reduce((acc, rate) => {
@@ -225,6 +219,7 @@ function CompletionTime({ onRatesUpdated }) {
     setActivities(newActivities);
   }, [rawActivities, isIron, userData, completionRates, sortConfig]);
 
+  // Sort activities by the given key
   const sortActivities = (key) => {
     let direction = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -254,6 +249,7 @@ function CompletionTime({ onRatesUpdated }) {
     setSortConfig({ key, direction });
   };
 
+  // Convert days to HH:MM:SS
   const formatTimeInHMS = (days) => {
     if (days === 'Done!' || days === 'No available data') return days;
     if (typeof days !== 'number' || days <= 0) return 'Done!';
@@ -264,6 +260,7 @@ function CompletionTime({ onRatesUpdated }) {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   };
 
+  // Color logic for time to next log slot
   const getTimeColor = (time) => {
     if (time === 'Done!' || time === 'No available data' || typeof time !== 'number') return '#c4b59e';
     const minTime = 0, maxTime = 2;
@@ -275,14 +272,28 @@ function CompletionTime({ onRatesUpdated }) {
   };
 
   return (
-    <div className="collection-log-container mx-auto my-5">
+    <div
+      className="mx-auto my-5 p-4"
+      style={{
+        backgroundColor: "#494034",
+        border: "4px solid #5c5647",
+        color: "#fc961f",
+        textShadow: "1px 1px 0 #000"
+      }}
+    >
       {/* Title Section */}
       <div className="flex flex-col items-center">
-        <h1 className="text-2xl font-bold text-yellow-300 text-center">
+        <h1 className="text-2xl font-bold text-center" style={{ color: "#fc961f" }}>
           Completion Times by Activity
         </h1>
         <div className="mt-2 flex items-center space-x-3">
-          <span className={`text-sm py-1 px-2 rounded transition-colors duration-300 ${!isIron ? "bg-yellow-300 text-black" : "bg-transparent text-yellow-300"}`}>
+          <span
+            className="text-sm py-1 px-2 rounded transition-colors duration-300"
+            style={{
+              backgroundColor: !isIron ? "#28251e" : "#3e3529",
+              color: "#fc961f"
+            }}
+          >
             Normal Account Completion Rates
           </span>
           <label className="relative inline-block w-12 h-6">
@@ -300,35 +311,47 @@ function CompletionTime({ onRatesUpdated }) {
               }}
               className="peer sr-only"
             />
-            <div className="w-full h-full bg-[#5A4736] rounded-full transition-colors duration-500"></div>
-            <div className="absolute top-1 left-1 bg-[#c4b59e] w-4 h-4 rounded-full transition-transform duration-500 transform peer-checked:translate-x-6"></div>
+            <div className="w-full h-full rounded-full transition-colors duration-500" style={{ backgroundColor: "#28251e" }}></div>
+            <div className="absolute top-1 left-1 w-4 h-4 rounded-full transition-transform duration-500 transform peer-checked:translate-x-6" style={{ backgroundColor: "#fc961f" }}></div>
           </label>
-          <span className={`text-sm py-1 px-2 rounded transition-colors duration-300 ${isIron ? "bg-yellow-300 text-black" : "bg-transparent text-yellow-300"}`}>
+          <span
+            className="text-sm py-1 px-2 rounded transition-colors duration-300"
+            style={{
+              backgroundColor: isIron ? "#28251e" : "#3e3529",
+              color: "#fc961f"
+            }}
+          >
             Ironman Completion Rates
           </span>
         </div>
       </div>
 
-      {/* Divider row */}
-      <div className="border-t border-gray-600 my-2"></div>
+      {/* Divider */}
+      <div className="my-2" style={{ borderTop: "1px solid #5c5647" }}></div>
 
       {/* Sticky Header Row */}
-      <div className="sticky top-0 z-10 bg-[#3B2C1A] border-b border-gray-600">
+      <div
+        className="sticky top-0 z-10"
+        style={{
+          backgroundColor: "#494034",
+          borderBottom: "4px solid #5c5647"
+        }}
+      >
         <div className="grid grid-cols-3 gap-x-4 font-bold text-center py-2">
-          <div className="cursor-pointer hover:text-[#ffcc66]" onClick={() => sortActivities('activity_name')}>
+          <div className="cursor-pointer hover:text-[#fc961f]" onClick={() => sortActivities('activity_name')}>
             Activity Name {sortConfig.key === 'activity_name' ? (sortConfig.direction === 'asc' ? ' ⬆' : ' ⬇') : ''}
           </div>
-          <div className="cursor-pointer hover:text-[#ffcc66]" onClick={() => sortActivities('time_to_next_log_slot')}>
+          <div className="cursor-pointer hover:text-[#fc961f]" onClick={() => sortActivities('time_to_next_log_slot')}>
             Time to Next Log Slot {sortConfig.key === 'time_to_next_log_slot' ? (sortConfig.direction === 'asc' ? ' ⬆' : ' ⬇') : ''}
           </div>
           <div className="text-center">Next Fastest Item</div>
         </div>
       </div>
 
-      {/* Scrollable container for the activity rows */}
+      {/* Scrollable container for activity rows */}
       <div
         ref={listContainerRef}
-        className="overflow-y-auto scrollable-container"
+        className="overflow-y-auto custom-scrollbar"
         style={{ height: '90vh', maxHeight: '750px' }}
       >
         {activities.length > 0 ? (
@@ -336,7 +359,6 @@ function CompletionTime({ onRatesUpdated }) {
             {activities.map((act) => {
               const rate = completionRates.find(r => r.activity_name === act.activity_name);
               const isActive = act.activity_name === expandedActivity;
-              // Attach the ref only to the active row.
               const rowRef = isActive ? activeRowRef : null;
               const wikiUrl =
                 itemsData &&
@@ -348,11 +370,15 @@ function CompletionTime({ onRatesUpdated }) {
                 <div
                   key={act.activity_name}
                   ref={rowRef}
-                  className="snap-center rounded-lg shadow-lg mb-4 overflow-hidden border border-white"
+                  className="snap-center rounded-lg shadow-lg mb-4 overflow-hidden border"
+                  style={{ borderColor: "#5c5647" }}
                 >
-                  {/* Main Row */}
                   <div
-                    className="grid grid-cols-3 gap-x-4 py-2 items-center cursor-pointer px-4 transition-colors duration-500 bg-[#3B2C1A] border-b"
+                    className="grid grid-cols-3 gap-x-4 py-2 items-center cursor-pointer px-4 transition-colors duration-500"
+                    style={{
+                      backgroundColor: isActive ? "#6f675e" : "#494034",
+                      borderBottom: "1px solid #5c5647"
+                    }}
                     onClick={() => toggleExpandedActivity(act.activity_name)}
                   >
                     <div className="text-center">{act.activity_name}</div>
@@ -384,7 +410,6 @@ function CompletionTime({ onRatesUpdated }) {
                     </div>
                   </div>
 
-                  {/* Detail Section using Framer Motion */}
                   <AnimatePresence>
                     {isActive && (
                       <motion.div
@@ -394,11 +419,18 @@ function CompletionTime({ onRatesUpdated }) {
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.5, ease: "easeInOut" }}
                         className="detail-section px-4 rounded-b-lg overflow-hidden"
+                        style={{
+                          backgroundColor: "#6f675e",
+                          borderBottom: "1px solid #5c5647"
+                        }}
                       >
                         <div className="py-2">
                           <div className="grid grid-cols-3 gap-4">
-                            <div className={`flex flex-col items-center gap-2 border rounded p-1 ${!isIron ? 'border-yellow-300' : 'border-transparent'}`}>
-                              <label className={`block text-sm font-semibold text-center ${!isIron ? 'text-yellow-300' : 'text-[#c4b59e]'}`}>
+                            <div
+                              className="flex flex-col items-center gap-2 border rounded p-1"
+                              style={{ borderColor: !isIron ? "#ffcc00" : "transparent" }}
+                            >
+                              <label className="block text-sm font-semibold text-center" style={{ color: "#fc961f" }}>
                                 Completions/hr (Main):
                               </label>
                               <DebouncedInput
@@ -408,12 +440,16 @@ function CompletionTime({ onRatesUpdated }) {
                                   handleRateChange(act.activity_name, 'user_completions_per_hour_main', Number(newVal))
                                 }
                                 min="0"
-                                className="border p-1 rounded text-center bg-[#d2b48c] text-black"
+                                className="border p-1 rounded text-center"
+                                style={{ backgroundColor: "#28251e", color: "#fc961f", borderColor: "#5c5647" }}
                                 title={rate ? `Default: ${rate.default_completions_per_hour_main}` : ''}
                               />
                             </div>
-                            <div className={`flex flex-col items-center gap-2 border rounded p-1 ${isIron ? 'border-yellow-300' : 'border-transparent'}`}>
-                              <label className={`block text-sm font-semibold text-center ${isIron ? 'text-yellow-300' : 'text-[#c4b59e]'}`}>
+                            <div
+                              className="flex flex-col items-center gap-2 border rounded p-1"
+                              style={{ borderColor: isIron ? "#ffcc00" : "transparent" }}
+                            >
+                              <label className="block text-sm font-semibold text-center" style={{ color: "#fc961f" }}>
                                 Completions/hr (Iron):
                               </label>
                               <DebouncedInput
@@ -423,12 +459,13 @@ function CompletionTime({ onRatesUpdated }) {
                                   handleRateChange(act.activity_name, 'user_completions_per_hour_iron', Number(newVal))
                                 }
                                 min="0"
-                                className="border p-1 rounded text-center bg-[#d2b48c] text-black"
+                                className="border p-1 rounded text-center"
+                                style={{ backgroundColor: "#28251e", color: "#fc961f", borderColor: "#5c5647" }}
                                 title={rate ? `Default: ${rate.default_completions_per_hour_iron}` : ''}
                               />
                             </div>
                             <div className="flex flex-col items-center gap-2">
-                              <label className="block text-sm font-semibold text-center text-[#c4b59e]">
+                              <label className="block text-sm font-semibold text-center" style={{ color: "#fc961f" }}>
                                 Extra Time (hrs):
                               </label>
                               <DebouncedInput
@@ -438,25 +475,32 @@ function CompletionTime({ onRatesUpdated }) {
                                   handleRateChange(act.activity_name, 'user_extra_time', Number(newVal))
                                 }
                                 min="0"
-                                className="border p-1 rounded text-center bg-[#d2b48c] text-black"
+                                className="border p-1 rounded text-center"
+                                style={{ backgroundColor: "#28251e", color: "#fc961f", borderColor: "#5c5647" }}
                                 title={rate ? `Default: ${rate.default_extra_time} hours` : ''}
                               />
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-4 mt-2">
                             <div>
-                              <label className="block text-sm font-semibold text-center text-[#c4b59e]">
+                              <label className="block text-sm font-semibold text-center" style={{ color: "#fc961f" }}>
                                 Notes:
                               </label>
-                              <div className="border p-1 rounded bg-[#d2b48c] text-center text-black">
+                              <div
+                                className="border p-1 rounded text-center"
+                                style={{ backgroundColor: "#28251e", color: "#fc961f", borderColor: "#5c5647" }}
+                              >
                                 {rate ? rate.notes || '-' : '-'}
                               </div>
                             </div>
                             <div>
-                              <label className="block text-sm font-semibold text-center text-[#c4b59e]">
+                              <label className="block text-sm font-semibold text-center" style={{ color: "#fc961f" }}>
                                 Verification Source:
                               </label>
-                              <div className="border p-1 rounded bg-[#d2b48c] text-center text-black">
+                              <div
+                                className="border p-1 rounded text-center"
+                                style={{ backgroundColor: "#28251e", color: "#fc961f", borderColor: "#5c5647" }}
+                              >
                                 {rate ? rate.verification_source || '-' : '-'}
                               </div>
                             </div>
@@ -470,7 +514,7 @@ function CompletionTime({ onRatesUpdated }) {
             })}
           </div>
         ) : (
-          <p className="py-4 text-center text-yellow-300">
+          <p className="py-4 text-center" style={{ color: "#fc961f" }}>
             No data available. Please upload a collection log.
           </p>
         )}
