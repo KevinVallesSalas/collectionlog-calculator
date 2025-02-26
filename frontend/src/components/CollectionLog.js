@@ -128,16 +128,19 @@ function CollectionLog() {
           }}
         >
           {/* Main header */}
-          <div
-            className="text-center font-bold text-sm border-b-4"
-            style={{
-              padding: "12px",
-              borderColor: "#5c5647",
-              backgroundColor: "#494034",
-            }}
-          >
-            Collection Log - {logData?.uniqueObtained || 0}/{logData?.uniqueItems || 0}
-          </div>
+<div
+  className="text-center font-bold text-sm border-b-4"
+  style={{
+    padding: "12px",
+    borderColor: "#5c5647",
+    backgroundColor: "#494034",
+  }}
+>
+  {(logData?.username && logData.username !== "Manual Upload")
+    ? `${logData.username}'s Collection Log`
+    : "Manually Uploaded Collection Log"}{" "}
+  - {logData?.uniqueObtained || 0}/{logData?.uniqueItems || 0}
+</div>
 
           {/* Section Tabs */}
           <div className="flex">
