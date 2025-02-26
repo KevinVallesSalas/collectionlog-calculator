@@ -74,7 +74,7 @@ function CollectionLog() {
   const itemSize = Math.floor(Math.min(itemSizeByWidth, itemSizeByHeight));
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative">
+    <div className="mx-auto my-5 p-4 relative">
       {/* Tooltip */}
       {tooltip.visible && (
         <div
