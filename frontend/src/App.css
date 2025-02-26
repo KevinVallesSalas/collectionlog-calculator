@@ -69,22 +69,34 @@ body {
   opacity: 50%;
 }
 
-/* Custom Scrollbar Styling */
+/* Updated Custom Scrollbar Styling */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 24px;
+  height: 24px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #2A1E14;
+  background: #3e3529; /* Dark brown track */
+  border: 2px solid #5c5647; /* Matching border */
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #7a5c3e;
-  border-radius: 4px;
+  background-color: #564d42; /* Lighter brown thumb */
+  border-radius: 8px;
+  border: 2px solid #5c5647;
+  box-shadow: inset 3px 3px 0 #453c31; /* Stronger 3D inset effect */
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #9b7a5c;
+.custom-scrollbar::-webkit-scrollbar-button {
+  background-color: #564d42; /* Same as thumb */
+  border: 2px solid #5c5647;
+  box-shadow: inset 3px 3px 0 #453c31;
+}
+
+/* Firefox support */
+.custom-scrollbar {
+  scrollbar-width: auto;
+  scrollbar-color: #564d42 #3e3529;
 }
 
 /* Custom OSRS Tabs */
