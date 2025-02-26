@@ -9,11 +9,32 @@ function FetchCollectionLogData({ onUploadComplete }) {
     setSelectedFile(event.target.files[0]);
   };
 
+  // Fetch activities and completion rates data concurrently
+  const fetchSupplementaryData = async () => {
+    try {
+      const [activitiesRes, ratesRes] = await Promise.all([
+        fetch('http://127.0.0.1:8000/log_importer/get-activities-data/'),
+        fetch('http://127.0.0.1:8000/log_importer/get-completion-rates/')
+      ]);
+      const activitiesJson = await activitiesRes.json();
+      const ratesJson = await ratesRes.json();
+
+      if (activitiesJson.status === 'success') {
+        localStorage.setItem('activitiesData', JSON.stringify(activitiesJson.data));
+      }
+      if (ratesJson.status === 'success' && Array.isArray(ratesJson.data)) {
+        localStorage.setItem('defaultCompletionRates', JSON.stringify(ratesJson.data));
+      }
+    } catch (error) {
+      console.error("Error fetching supplementary data:", error);
+    }
+  };
+
   const processFetchedLogData = (data) => {
     if (data.status === 'success') {
       setUploadStatus('Log fetched successfully!');
       
-      // ✅ Store collection log data along with boss kill counts
+      // Store collection log data along with boss kill counts
       const logData = data.data;
 
       if (logData.sections?.Bosses) {
@@ -24,15 +45,18 @@ function FetchCollectionLogData({ onUploadComplete }) {
         });
       }
 
-      // ✅ Save the data to local storage
+      // Save the data to local storage
       localStorage.setItem('collectionLogData', JSON.stringify(logData));
 
-      // ✅ Store Ironman status
+      // Store Ironman status
       const newMode = logData.accountType === "IRONMAN";
       localStorage.setItem('isIron', JSON.stringify(newMode));
       localStorage.setItem('userToggledMode', JSON.stringify(false));
 
-      // ✅ Notify the app that new data is available
+      // Fetch supplementary data (activities and completion rates)
+      fetchSupplementaryData();
+
+      // Notify the app that new data is available
       onUploadComplete();
     } else {
       setUploadStatus(`Error: ${data.message}`);

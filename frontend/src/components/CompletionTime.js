@@ -47,15 +47,10 @@ function CompletionTime({ onRatesUpdated }) {
   const [rawActivities, setRawActivities] = useState([]);
   const [activities, setActivities] = useState([]);
   const [userData, setUserData] = useState({ completed_items: [] });
-  const fetchedActivities = useRef(false);
-
   const [expandedActivity, setExpandedActivity] = useState(null);
   const activeRowRef = useRef(null);
   const listContainerRef = useRef(null);
-
   const [completionRates, setCompletionRates] = useState([]);
-  const fetchedRates = useRef(false);
-
   const [isIron, setIsIron] = useState(() => JSON.parse(localStorage.getItem('isIron')) ?? false);
   const [userToggled, setUserToggled] = useState(() => JSON.parse(localStorage.getItem('userToggledMode')) ?? false);
   const [sortConfig, setSortConfig] = useState({ key: 'time_to_next_log_slot', direction: 'asc' });
@@ -66,25 +61,15 @@ function CompletionTime({ onRatesUpdated }) {
     config: { duration: 500 }
   }));
 
-  // Fetch activities data
+  // Load activities data from local storage
   useEffect(() => {
-    if (fetchedActivities.current) return;
-    fetchedActivities.current = true;
-    async function fetchActivitiesData() {
-      try {
-        const response = await fetch('http://127.0.0.1:8000/log_importer/get-activities-data/');
-        const json = await response.json();
-        if (json.status === 'success') {
-          setRawActivities(json.data);
-        }
-      } catch (error) {
-        console.error('Error fetching activities data:', error);
-      }
+    const savedActivities = localStorage.getItem('activitiesData');
+    if (savedActivities) {
+      setRawActivities(JSON.parse(savedActivities));
     }
-    fetchActivitiesData();
   }, []);
 
-  // Load collection log data
+  // Load collection log data from local storage
   useEffect(() => {
     const savedLogData = JSON.parse(localStorage.getItem('collectionLogData'));
     if (!savedLogData || !savedLogData.sections) {
@@ -115,37 +100,22 @@ function CompletionTime({ onRatesUpdated }) {
     }
   }, [rawActivities, userToggled]);
 
-  // Fetch completion rates
+  // Load completion rates data from local storage
   useEffect(() => {
-    if (fetchedRates.current) return;
-    fetchedRates.current = true;
-    async function fetchCompletionRates() {
-      try {
-        const response = await fetch('http://127.0.0.1:8000/log_importer/get-completion-rates/');
-        const json = await response.json();
-        if (json.status === 'success' && Array.isArray(json.data)) {
-          const defaultRates = json.data;
-          const storedRates = JSON.parse(localStorage.getItem('userCompletionRates')) || {};
-          const mergedRates = defaultRates.map(rate => ({
-            activity_name: rate.activity_name || "Unknown Activity",
-            user_completions_per_hour_main: storedRates[rate.activity_name]?.completions_per_hour_main ?? rate.completions_per_hour_main ?? 0,
-            user_completions_per_hour_iron: storedRates[rate.activity_name]?.completions_per_hour_iron ?? rate.completions_per_hour_iron ?? 0,
-            user_extra_time: storedRates[rate.activity_name]?.extra_time_to_first_completion ?? rate.extra_time_to_first_completion ?? 0,
-            default_completions_per_hour_main: rate.completions_per_hour_main ?? 0,
-            default_completions_per_hour_iron: rate.completions_per_hour_iron ?? 0,
-            default_extra_time: rate.extra_time_to_first_completion ?? 0,
-            notes: rate.notes ?? '',
-            verification_source: rate.verification_source ?? ''
-          }));
-          setCompletionRates(mergedRates);
-        } else {
-          console.error("Invalid API response format:", json);
-        }
-      } catch (error) {
-        console.error('Error fetching completion rates:', error);
-      }
-    }
-    fetchCompletionRates();
+    const defaultRates = JSON.parse(localStorage.getItem('defaultCompletionRates')) || [];
+    const storedUserRates = JSON.parse(localStorage.getItem('userCompletionRates')) || {};
+    const mergedRates = defaultRates.map(rate => ({
+      activity_name: rate.activity_name || "Unknown Activity",
+      user_completions_per_hour_main: storedUserRates[rate.activity_name]?.completions_per_hour_main ?? rate.completions_per_hour_main ?? 0,
+      user_completions_per_hour_iron: storedUserRates[rate.activity_name]?.completions_per_hour_iron ?? rate.completions_per_hour_iron ?? 0,
+      user_extra_time: storedUserRates[rate.activity_name]?.extra_time_to_first_completion ?? rate.extra_time_to_first_completion ?? 0,
+      default_completions_per_hour_main: rate.completions_per_hour_main ?? 0,
+      default_completions_per_hour_iron: rate.completions_per_hour_iron ?? 0,
+      default_extra_time: rate.extra_time_to_first_completion ?? 0,
+      notes: rate.notes ?? '',
+      verification_source: rate.verification_source ?? ''
+    }));
+    setCompletionRates(mergedRates);
   }, []);
 
   // Handle changes to custom completion rates
@@ -168,11 +138,7 @@ function CompletionTime({ onRatesUpdated }) {
 
   // Toggle the expanded activity
   const toggleExpandedActivity = (activityName) => {
-    if (expandedActivity === activityName) {
-      setExpandedActivity(null);
-    } else {
-      setExpandedActivity(activityName);
-    }
+    setExpandedActivity(expandedActivity === activityName ? null : activityName);
   };
 
   // Smooth scroll to the expanded activity row
