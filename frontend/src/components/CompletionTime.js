@@ -272,7 +272,8 @@ function CompletionTime({ onRatesUpdated }) {
   };
 
   return (
-    <div
+    <motion.div
+      layout
       className="mx-auto my-5 p-4"
       style={{
         backgroundColor: "#494034",
@@ -519,7 +520,7 @@ function CompletionTime({ onRatesUpdated }) {
           </p>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
