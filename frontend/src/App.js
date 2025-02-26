@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { CSSTransition, SwitchTransition } from 'react-transition-group';
 import './App.css';
 import FetchCollectionlogData from './components/FetchCollectionLogData';
@@ -12,6 +12,7 @@ function App() {
   const [userCompletionRates] = useState(
     JSON.parse(localStorage.getItem('userCompletionRates')) || {}
   );
+  const nodeRef = useRef(null); // Create a ref for the transitioning element
 
   const handleUploadComplete = () => {
     setRefreshLog(!refreshLog);
@@ -61,12 +62,11 @@ function App() {
           <SwitchTransition mode="out-in">
             <CSSTransition
               key={activeTab}
-              addEndListener={(node, done) => {
-                node.addEventListener("transitionend", done, false);
-              }}
+              nodeRef={nodeRef} // Pass the ref here
+              timeout={100}   // Set a timeout if you don't use addEndListener
               classNames="fade"
             >
-              <div>
+              <div ref={nodeRef}>
                 {renderTabContent()}
               </div>
             </CSSTransition>
