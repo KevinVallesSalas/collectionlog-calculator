@@ -2,15 +2,12 @@
  * calculations.js (Includes Extra Time in Calculation)
  *******************************************************/
 
-/**
- * Ensures userData is always an object with completed_items as an array.
- */
 function validateUserData(userData) {
   if (!userData || !Array.isArray(userData.completed_items)) {
     console.warn("Warning: userData is undefined or invalid. Defaulting to empty array.");
     return { completed_items: [] };
   }
-  return userData;
+  return userData; 
 }
 
 export function calculateEffectiveDroprateNeither(items, userData) {
@@ -78,7 +75,7 @@ export function calculateTimeToNextLogSlot(items, completionsPerHour, extraTimeT
 /* --- New functions --- */
 
 /**
- * Finds the next fastest uncompleted item and returns both its id and name.
+ * Finds the next fastest uncompleted item and returns an object with its id and name.
  */
 export function findNextFastestItem(items, userData) {
   userData = validateUserData(userData);
@@ -89,11 +86,13 @@ export function findNextFastestItem(items, userData) {
 }
 
 /**
- * Given an activity and the current user settings, this function
- * returns an object with the calculated time to next log slot and fastest slot info.
+ * Given an activity and the current user settings, returns an object with:
+ * - time_to_next_log_slot
+ * - fastest_slot_name
+ * - fastest_slot_id
+ * along with the user rates.
  */
 export function calculateActivityData(activity, userCompletionRates, isIron, userData) {
-  // Create unified fields from activity.maps
   const mappedItems = (Array.isArray(activity.maps) ? activity.maps : []).map((m) => ({
     id: m.item_id,
     name: m.item_name,
@@ -136,7 +135,6 @@ export function calculateActivityData(activity, userCompletionRates, isIron, use
     userData || { completed_items: [] }
   );
 
-  // Use the new helper to get both the fastest slot’s id and name.
   const fastestSlot = findNextFastestItem(mappedItems, userData || { completed_items: [] });
 
   return {
@@ -147,4 +145,63 @@ export function calculateActivityData(activity, userCompletionRates, isIron, use
     completions_per_hour: completionsPerHour,
     extra_time_to_first_completion: extraTimeToFirstCompletion,
   };
+}
+
+/**
+ * Updates the next fastest item in localStorage.
+ * Merges user rates (from "userCompletionRates") with default rates.
+ */
+export function updateNextFastestItem() {
+  const savedActivities = JSON.parse(localStorage.getItem('activitiesData')) || [];
+  const savedLogData = JSON.parse(localStorage.getItem('collectionLogData'));
+  if (!savedLogData || !savedLogData.sections) {
+    localStorage.setItem('nextFastestItem', JSON.stringify({ id: null, name: '-' }));
+    localStorage.setItem('nextFastestItemName', '-');
+    return;
+  }
+  const defaultRates = JSON.parse(localStorage.getItem('defaultCompletionRates')) || [];
+  const storedUserRates = JSON.parse(localStorage.getItem('userCompletionRates')) || {};
+  const ratesMapping = {};
+  defaultRates.forEach(rate => {
+    ratesMapping[rate.activity_name] = {
+      completions_per_hour_main: storedUserRates[rate.activity_name]?.completions_per_hour_main ?? rate.completions_per_hour_main ?? 0,
+      completions_per_hour_iron: storedUserRates[rate.activity_name]?.completions_per_hour_iron ?? rate.completions_per_hour_iron ?? 0,
+      extra_time_to_first_completion: storedUserRates[rate.activity_name]?.extra_time_to_first_completion ?? rate.extra_time_to_first_completion ?? 0,
+    };
+  });
+  const collectedItems = [];
+  Object.values(savedLogData.sections).forEach(section => {
+    Object.values(section).forEach(activity => {
+      if (activity.items && Array.isArray(activity.items)) {
+        activity.items.forEach(item => {
+          if (item.obtained) collectedItems.push(item.id);
+        });
+      }
+    });
+  });
+  const userData = {
+    completed_items: collectedItems,
+    accountType: savedLogData.accountType || "NORMAL"
+  };
+  const isIron = JSON.parse(localStorage.getItem('isIron')) ?? false;
+  const newActivities = savedActivities.map(activity =>
+    calculateActivityData(activity, ratesMapping, isIron, userData)
+  );
+  newActivities.sort((a, b) => {
+    const aVal = typeof a.time_to_next_log_slot === 'number' ? a.time_to_next_log_slot : Infinity;
+    const bVal = typeof b.time_to_next_log_slot === 'number' ? b.time_to_next_log_slot : Infinity;
+    return aVal - bVal;
+  });
+  const validActivities = newActivities.filter(
+    (act) => typeof act.time_to_next_log_slot === 'number' && act.time_to_next_log_slot > 0
+  );
+  const nextFastest = validActivities.length > 0 ? validActivities[0] : null;
+  if (nextFastest) {
+    const obj = { id: nextFastest.fastest_slot_id, name: nextFastest.fastest_slot_name };
+    localStorage.setItem('nextFastestItem', JSON.stringify(obj));
+    localStorage.setItem('nextFastestItemName', nextFastest.fastest_slot_name);
+  } else {
+    localStorage.setItem('nextFastestItem', JSON.stringify({ id: null, name: '-' }));
+    localStorage.setItem('nextFastestItemName', '-');
+  }
 }

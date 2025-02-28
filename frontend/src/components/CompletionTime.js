@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { animated, useTransition } from 'react-spring';
-import { calculateActivityData } from '../utils/calculations';
+import { calculateActivityData, updateNextFastestItem } from '../utils/calculations';
 import ItemImage from './ItemImage';
 import { useItemsData } from '../contexts/ItemsProvider';
 
@@ -38,7 +38,6 @@ function DebouncedInput({ type = "text", value, onDebouncedChange, delay = 500, 
   );
 }
 
-// Extracted component for each activity row with its own detail transition
 function ActivityRow({
   act,
   expandedActivity,
@@ -305,6 +304,9 @@ function CompletionTime({ onRatesUpdated }) {
     localStorage.setItem('userCompletionRates', JSON.stringify(storedRates));
     if (onRatesUpdated) onRatesUpdated(storedRates);
   
+    // Immediately update next fastest item after a rate change.
+    updateNextFastestItem();
+  
     // After updating rates, snap the active row into view after 100ms
     setTimeout(() => {
       if (expandedActivity && activeRowRef.current) {
@@ -347,6 +349,16 @@ function CompletionTime({ onRatesUpdated }) {
         if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
         return 0;
       });
+    }
+    // Identify the "next fastest" item
+    const validActivities = newActivities.filter(
+      (act) => typeof act.time_to_next_log_slot === 'number' && act.time_to_next_log_slot > 0
+    );
+    const nextFastest = validActivities.length > 0 ? validActivities[0] : null;
+    if (nextFastest) {
+      localStorage.setItem('nextFastestItemName', nextFastest.fastest_slot_name);
+    } else {
+      localStorage.removeItem('nextFastestItemName');
     }
     setActivities(newActivities);
   }, [rawActivities, isIron, userData, completionRates, sortConfig]);
