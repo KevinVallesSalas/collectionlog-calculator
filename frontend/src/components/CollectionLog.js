@@ -6,30 +6,24 @@ const CustomScrollbarStyles = () => (
   <style>{`
     /* For WebKit-based browsers (Chrome, Safari, etc.) */
     .custom-scrollbar::-webkit-scrollbar {
-      width: 24px;          /* scrollbar thickness */
+      width: 24px;
       height: 24px;
-      background: #3e3529;  /* fallback background */
+      background: #3e3529;
     }
-
     .custom-scrollbar::-webkit-scrollbar-track {
-      background-color: #3e3529; /* dark brown track */
-      border: 2px solid #5c5647; /* border to match your overall UI */
+      background-color: #3e3529;
+      border: 2px solid #5c5647;
     }
-
     .custom-scrollbar::-webkit-scrollbar-thumb {
-      background-color: #564d42; /* lighter brown thumb */
+      background-color: #564d42;
       border: 2px solid #5c5647;
-      /* Stronger inset shadow for a more pronounced 3D effect */
       box-shadow: inset 3px 3px 0 #453c31;
     }
-
-    /* Style the up/down arrow buttons */
     .custom-scrollbar::-webkit-scrollbar-button {
-      background-color: #564d42; /* same as thumb */
+      background-color: #564d42;
       border: 2px solid #5c5647;
       box-shadow: inset 3px 3px 0 #453c31;
     }
-
     /* For Firefox */
     .custom-scrollbar {
       scrollbar-width: thin;
@@ -37,6 +31,13 @@ const CustomScrollbarStyles = () => (
     }
   `}</style>
 );
+
+// Helper sorting function that ignores a leading "the"
+const sortIgnoreThe = (a, b) => {
+  const cleanA = a.toLowerCase().replace(/^the\s+/, "");
+  const cleanB = b.toLowerCase().replace(/^the\s+/, "");
+  return cleanA.localeCompare(cleanB);
+};
 
 function CollectionLog() {
   const [logData, setLogData] = useState(null);
@@ -128,19 +129,19 @@ function CollectionLog() {
           }}
         >
           {/* Main header */}
-<div
-  className="text-center font-bold text-sm border-b-4"
-  style={{
-    padding: "12px",
-    borderColor: "#5c5647",
-    backgroundColor: "#494034",
-  }}
->
-  {(logData?.username && logData.username !== "Manual Upload")
-    ? `${logData.username}'s Collection Log`
-    : "Manually Uploaded Collection Log"}{" "}
-  - {logData?.uniqueObtained || 0}/{logData?.uniqueItems || 0}
-</div>
+          <div
+            className="text-center font-bold text-sm border-b-4"
+            style={{
+              padding: "12px",
+              borderColor: "#5c5647",
+              backgroundColor: "#494034",
+            }}
+          >
+            {(logData?.username && logData.username !== "Manual Upload")
+              ? `${logData.username}'s Collection Log`
+              : "Manually Uploaded Collection Log"}{" "}
+            - {logData?.uniqueObtained || 0}/{logData?.uniqueItems || 0}
+          </div>
 
           {/* Section Tabs */}
           <div className="flex">
@@ -185,36 +186,38 @@ function CollectionLog() {
               {groupedItems[activeSection] &&
               Object.keys(groupedItems[activeSection]).length > 0 ? (
                 <ul style={{ margin: 0, padding: 0 }}>
-                  {Object.keys(groupedItems[activeSection]).map((subsection, index) => {
-                    const items = groupedItems[activeSection][subsection]?.items || [];
-                    const obtainedCount = items.filter((i) => i.obtained).length;
-                    const totalItems = items.length;
-                    const isComplete = obtainedCount === totalItems;
-                    const isSelected = subsection === activeSubsection;
-                    const rowBackground = isSelected
-                      ? "#6f675e"
-                      : index % 2 === 0
-                      ? "#453c31"
-                      : "#564d42";
-                    return (
-                      <li key={subsection} style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                        <button
-                          onClick={() => setActiveSubsection(subsection)}
-                          className="w-full text-left"
-                          style={{
-                            backgroundColor: rowBackground,
-                            color: isComplete ? "#00ff00" : "#fc961f",
-                            textShadow: "inherit",
-                            border: "none",
-                            padding: "0.5rem",
-                            display: "block"
-                          }}
-                        >
-                          {subsection}
-                        </button>
-                      </li>
-                    );
-                  })}
+                  {Object.keys(groupedItems[activeSection])
+                    .sort(activeSection === "Bosses" ? sortIgnoreThe : undefined)
+                    .map((subsection, index) => {
+                      const items = groupedItems[activeSection][subsection]?.items || [];
+                      const obtainedCount = items.filter((i) => i.obtained).length;
+                      const totalItems = items.length;
+                      const isComplete = obtainedCount === totalItems;
+                      const isSelected = subsection === activeSubsection;
+                      const rowBackground = isSelected
+                        ? "#6f675e"
+                        : index % 2 === 0
+                        ? "#453c31"
+                        : "#564d42";
+                      return (
+                        <li key={subsection} style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                          <button
+                            onClick={() => setActiveSubsection(subsection)}
+                            className="w-full text-left"
+                            style={{
+                              backgroundColor: rowBackground,
+                              color: isComplete ? "#00ff00" : "#fc961f",
+                              textShadow: "inherit",
+                              border: "none",
+                              padding: "0.5rem",
+                              display: "block"
+                            }}
+                          >
+                            {subsection}
+                          </button>
+                        </li>
+                      );
+                    })}
                 </ul>
               ) : (
                 <p className="text-xs" style={{ padding: "0.5rem" }}>
