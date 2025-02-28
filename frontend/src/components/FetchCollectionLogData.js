@@ -2,6 +2,52 @@ import React, { useState, useEffect } from 'react';
 import { updateNextFastestItem } from '../utils/calculations';
 import ItemImage from './ItemImage';
 
+/**
+ * Hard-coded category data for the 5 major sections.
+ * Each has a name, iconId, obtained, total, and color for the small progress bar.
+ */
+const categoryData = [
+  { name: 'Bosses',    iconId: 12819, obtained: 45, total: 300, color: '#ffcc00' },
+  { name: 'Raids',     iconId: 20997, obtained: 3,  total: 66,  color: '#ffcc00' },
+  { name: 'Clues',     iconId: 19730, obtained: 68, total: 598, color: '#ffcc00' },
+  { name: 'Minigames', iconId: 4509,  obtained: 79, total: 244, color: '#ffcc00' },
+  { name: 'Other',     iconId: 21439, obtained: 120, total: 360, color: '#ffcc00' },
+];
+
+/**
+ * Example array for 12 most recently obtained items.
+ */
+const recentItems = [
+  { id: 20001, name: "Item 1" },
+  { id: 20002, name: "Item 2" },
+  { id: 20003, name: "Item 3" },
+  { id: 20004, name: "Item 4" },
+  { id: 20005, name: "Item 5" },
+  { id: 20006, name: "Item 6" },
+  { id: 20007, name: "Item 7" },
+  { id: 20008, name: "Item 8" },
+  { id: 20009, name: "Item 9" },
+  { id: 20010, name: "Item 10" },
+  { id: 20011, name: "Item 11" },
+  { id: 20012, name: "Item 12" },
+];
+
+/**
+ * Divider component that spans the full width of the overview container.
+ * We set its width to calc(100% + 2rem) and use negative margins to cancel out the container’s 1rem padding.
+ */
+const Divider = () => (
+  <div
+    style={{
+      width: "calc(100% + 2rem)",
+      marginLeft: "-1rem",
+      borderBottom: "4px solid #5c5647",
+      marginTop: "0.5rem",
+      marginBottom: "0.5rem",
+    }}
+  />
+);
+
 function FetchCollectionLogData({ onUploadComplete }) {
   const [username, setUsername] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -29,7 +75,7 @@ function FetchCollectionLogData({ onUploadComplete }) {
   const uniqueObtained = savedLogData?.uniqueObtained ?? 0;
   const uniqueItems = savedLogData?.uniqueItems ?? 0;
 
-  // Track next fastest item from localStorage (as an object)
+  // Next fastest item from localStorage
   const [nextFastestItem, setNextFastestItem] = useState(
     JSON.parse(localStorage.getItem('nextFastestItem')) || { id: null, name: '-' }
   );
@@ -43,7 +89,7 @@ function FetchCollectionLogData({ onUploadComplete }) {
     }
   }, [activeTab]);
 
-  // Helper: relative time
+  // Relative time helper
   const getRelativeTime = (timestamp) => {
     if (!timestamp) return '';
     const updatedDate = new Date(timestamp);
@@ -58,9 +104,9 @@ function FetchCollectionLogData({ onUploadComplete }) {
     return `${days} days ago`;
   };
 
-  // Button hover/press handlers for a 3D effect
+  // 3D button hover/press handlers
   const handleButtonMouseEnter = (e) => {
-    e.currentTarget.style.backgroundColor = "#7f786d"; // slightly lighter
+    e.currentTarget.style.backgroundColor = "#7f786d";
   };
   const handleButtonMouseLeave = (e) => {
     e.currentTarget.style.backgroundColor = "#6f675e";
@@ -75,7 +121,7 @@ function FetchCollectionLogData({ onUploadComplete }) {
     e.currentTarget.style.boxShadow = "0 4px #2a1e14";
   };
 
-  // Reset data: instead of clearing the last updated value, we display a message.
+  // Reset data: display a message instead of removing the last updated text.
   const handleResetData = () => {
     localStorage.clear();
     setLastUpdated("Data has been reset");
@@ -83,7 +129,7 @@ function FetchCollectionLogData({ onUploadComplete }) {
     setNextFastestItem({ id: null, name: '-' });
   };
 
-  // Process fetched data (both API & file upload)
+  // Process fetched data (API & file upload)
   const processFetchedLogData = (data) => {
     if (data.status === 'success') {
       setUploadStatus('Log fetched successfully!');
@@ -103,7 +149,6 @@ function FetchCollectionLogData({ onUploadComplete }) {
       localStorage.setItem('collectionLogLastUpdated', now);
       setLastUpdated(now);
 
-      // Supplementary requests for activities & rates
       Promise.all([
         fetch('http://127.0.0.1:8000/log_importer/get-activities-data/'),
         fetch('http://127.0.0.1:8000/log_importer/get-completion-rates/')
@@ -179,172 +224,212 @@ function FetchCollectionLogData({ onUploadComplete }) {
         flexDirection: "column",
       }}
     >
-      {/* TOP SECTION */}
+      {/* 1) Collection Log Overview */}
       <div
         style={{
-          flex: 1,
+          backgroundColor: "#3e3529",
+          border: "6px solid #5c5647",
+          borderRadius: "12px",
+          padding: "1rem",
           marginBottom: "1rem",
-          borderBottom: "2px solid #5c5647",
-          paddingBottom: "1rem",
           display: "flex",
-          flexDirection: "row",
-          gap: "1rem",
+          flexDirection: "column",
+          alignItems: "center",
         }}
       >
-        {/* LEFT: Instructions */}
-        <div style={{ flex: 1 }}>
-          <h2 style={{ textAlign: "center", marginBottom: "0.5rem" }}>
-            How To Use The App
-          </h2>
-          <p style={{ textAlign: "center", maxWidth: "600px", margin: "0 auto" }}>
-            Import and view your OSRS Collection Log data either by fetching it via the 
-            <strong> collectionlog.net</strong> API or by manually uploading a <em>.json</em> file.
-            Use the tabs below to choose your method.
-          </p>
+        {/* Top summary */}
+        <div style={{ fontSize: "1.4rem", fontWeight: "bold", marginBottom: "1rem", textAlign: "center" }}>
+          {displayedUsername}'s Collection Log - {uniqueObtained}/{uniqueItems}
         </div>
+        {/* Divider spanning full width */}
+        <Divider />
 
-        {/* RIGHT COLUMN */}
+        {/* Row of 5 square category blocks */}
         <div
           style={{
-            width: "35%",
+            width: "100%",
             display: "flex",
-            flexDirection: "column",
             gap: "0.5rem",
+            justifyContent: "space-around",
+            flexWrap: "wrap",
+            margin: "1rem 0",
           }}
         >
-          {/* Title above the container */}
-          <div style={{ textAlign: "center", fontSize: "1.3rem", fontWeight: "bold" }}>
-            Current Collection Log Data
+          {categoryData.map((cat) => {
+            const fractionText = `${cat.obtained}/${cat.total}`;
+            const fraction = cat.obtained / cat.total;
+            const barWidth = fraction * 100;
+            return (
+              <div
+                key={cat.name}
+                style={{
+                  backgroundColor: "#28251e",
+                  border: "2px solid #5c5647",
+                  borderRadius: "8px",
+                  aspectRatio: "1 / 1",
+                  width: "120px",
+                  minWidth: "120px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "0.5rem",
+                }}
+              >
+                {/* Category name at top */}
+                <div style={{ fontSize: "0.9rem", color: "#fc961f", marginBottom: "0.3rem" }}>
+                  {cat.name}
+                </div>
+                {/* Icon */}
+                <ItemImage itemId={cat.iconId} fallbackName={cat.name} className="w-6 h-6" disableLink={true} />
+                {/* Fraction */}
+                <div style={{ marginTop: "0.2rem", fontSize: "0.8rem", color: "#00ff00" }}>
+                  {fractionText}
+                </div>
+                {/* Small progress bar with tick marks */}
+                <div
+                  style={{
+                    marginTop: "0.2rem",
+                    width: "80%",
+                    height: "6px",
+                    backgroundColor: "#453c31",
+                    border: "1px solid #5c5647",
+                    borderRadius: "2px",
+                    position: "relative",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div style={{ position: "absolute", top: 0, left: "25%", width: "1px", height: "100%", backgroundColor: "#5c5647" }} />
+                  <div style={{ position: "absolute", top: 0, left: "50%", width: "1px", height: "100%", backgroundColor: "#5c5647" }} />
+                  <div style={{ position: "absolute", top: 0, left: "75%", width: "1px", height: "100%", backgroundColor: "#5c5647" }} />
+                  <div style={{ position: "absolute", top: 0, left: 0, width: `${barWidth}%`, height: "100%", backgroundColor: cat.color }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Latest Collections container, scaling with overview container */}
+        <div
+          style={{
+            width: "90%",
+            backgroundColor: "#28251e",
+            border: "2px solid #5c5647",
+            borderRadius: "8px",
+            marginBottom: "1rem",
+            padding: "0.5rem",
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: "1rem", color: "#fc961f", marginBottom: "0.3rem" }}>
+            Latest Collections
           </div>
+          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
+            {recentItems.slice(0, 12).map((item) => (
+              <ItemImage
+                key={item.id}
+                itemId={item.id}
+                fallbackName={item.name}
+                className="w-6 h-6"
+                disableLink={true}
+                style={{ opacity: 1 }}
+              />
+            ))}
+          </div>
+        </div>
 
-          {/* Main container with border, username, squares, reset button, and last updated */}
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              backgroundColor: "#3e3529",
-              border: "6px solid #5c5647",
-              borderRadius: "12px",
-              padding: "1rem",
-            }}
-          >
-            {/* Username */}
-            <div style={{ textAlign: "center", marginBottom: "1rem", fontSize: "3.8rem", fontWeight: "bold" }}>
-              {displayedUsername}
-            </div>
-
-            {/* Expandable space for the squares */}
-            <div
+        {/* Next Fastest Item container, scaling with overview container */}
+        <div
+          style={{
+            backgroundColor: "#28251e",
+            border: "2px solid #5c5647",
+            borderRadius: "8px",
+            width: "90%",
+            marginBottom: "1rem",
+            padding: "0.5rem",
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: "1.2rem", color: "#fc961f", marginBottom: "0.3rem" }}>
+            Next Fastest Item
+          </div>
+          {nextFastestItem.name === '-' ? (
+            <div style={{ fontSize: "1rem", fontWeight: "bold", color: "#c2b59b" }}>-</div>
+          ) : (
+            <a
+              href={`https://oldschool.runescape.wiki/w/${encodeURIComponent(nextFastestItem.name)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-transform duration-200 hover:scale-105 hover:underline"
               style={{
-                flex: 1,
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "1rem",
-                alignItems: "stretch",
-                justifyItems: "center",
-                marginBottom: "1rem",
-              }}
-            >
-              {/* Collections Logged */}
-              <div
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  backgroundColor: "#28251e",
-                  border: "2px solid #5c5647",
-                  borderRadius: "8px",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <div style={{ fontSize: "2.4rem", color: "#fc961f", marginBottom: "0.3rem", marginTop: "0.3rem" }}>
-                  Collections Logged:
-                </div>
-                <ItemImage itemId={0} fallbackName="Collection Log" className="w-8 h-8" disableLink={true} />
-                <div style={{ fontSize: "1.3rem", fontWeight: "bold", marginTop: "0.2rem", color: "#00ff00" }}>
-                  {uniqueObtained}/{uniqueItems}
-                </div>
-              </div>
-
-              {/* Next Fastest Item */}
-              <div
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  backgroundColor: "#28251e",
-                  border: "2px solid #5c5647",
-                  borderRadius: "8px",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <div style={{ fontSize: "2.4rem", color: "#fc961f", marginBottom: "0.3rem", marginTop: "0.3rem" }}>
-                  Next Fastest Item:
-                </div>
-                {nextFastestItem.name === '-' ? (
-                  <div style={{ fontSize: "1.3rem", fontWeight: "bold", color: "#c2b59b" }}>-</div>
-                ) : (
-                  <a
-                    href={`https://oldschool.runescape.wiki/w/${encodeURIComponent(nextFastestItem.name)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="transition-transform duration-200 hover:scale-105 hover:underline"
-                    style={{ color: "#fc961f", display: "flex", flexDirection: "column", alignItems: "center" }}
-                  >
-                    <ItemImage itemId={nextFastestItem.id} fallbackName={nextFastestItem.name} className="w-8 h-8" disableLink={true} />
-                    <span style={{ fontSize: "1.6rem", fontWeight: "bold", marginTop: "0.2rem" }}>
-                      {nextFastestItem.name}
-                    </span>
-                  </a>
-                )}
-              </div>
-            </div>
-
-            {/* Reset button - bigger & 3D */}
-            <button
-              onClick={handleResetData}
-              onMouseEnter={handleButtonMouseEnter}
-              onMouseLeave={handleButtonMouseLeave}
-              onMouseDown={handleButtonMouseDown}
-              onMouseUp={handleButtonMouseUp}
-              style={{
-                width: "90%",
-                padding: "0.7rem",
-                margin: "0 auto",
-                backgroundColor: "#6f675e",
-                border: "1px solid #5c5647",
                 color: "#fc961f",
-                cursor: "pointer",
-                borderRadius: "4px",
-                fontWeight: "bold",
-                fontSize: "1rem",
-                textAlign: "center",
-                boxShadow: "0 4px #2a1e14",
-                transition: "all 0.1s ease-in-out",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              Reset App Data
-            </button>
+              <ItemImage itemId={nextFastestItem.id} fallbackName={nextFastestItem.name} className="w-6 h-6" disableLink={true} />
+              <span style={{ fontSize: "1.1rem", fontWeight: "bold", marginTop: "0.2rem" }}>
+                {nextFastestItem.name}
+              </span>
+            </a>
+          )}
+        </div>
 
-            {/* Last updated time below the reset button */}
-            <div
-              style={{
-                textAlign: "center",
-                fontStyle: "italic",
-                fontSize: "0.8rem",
-                marginTop: "0.5rem",
-              }}
-            >
-              {lastUpdated ? `Last updated: ${getRelativeTime(lastUpdated)}` : ''}
-            </div>
-          </div>
+        {/* Reset button, scaling with overview container */}
+        <button
+          onClick={handleResetData}
+          onMouseEnter={handleButtonMouseEnter}
+          onMouseLeave={handleButtonMouseLeave}
+          onMouseDown={handleButtonMouseDown}
+          onMouseUp={handleButtonMouseUp}
+          style={{
+            width: "90%",
+            padding: "0.7rem",
+            backgroundColor: "#6f675e",
+            border: "1px solid #5c5647",
+            color: "#fc961f",
+            cursor: "pointer",
+            borderRadius: "4px",
+            fontWeight: "bold",
+            fontSize: "1rem",
+            textAlign: "center",
+            boxShadow: "0 4px #2a1e14",
+            transition: "all 0.1s ease-in-out",
+            marginBottom: "0.5rem",
+          }}
+        >
+          Reset App Data
+        </button>
+        <div
+          style={{
+            textAlign: "center",
+            fontStyle: "italic",
+            fontSize: "0.8rem",
+          }}
+        >
+          {lastUpdated ? `Last updated: ${getRelativeTime(lastUpdated)}` : ''}
         </div>
       </div>
 
-      {/* BOTTOM TABS */}
+      {/* 2) Instructions below the overview */}
+      <div
+        style={{
+          marginBottom: "1rem",
+          textAlign: "center",
+          maxWidth: "600px",
+          margin: "0 auto 1rem",
+        }}
+      >
+        <h2 style={{ marginBottom: "0.5rem" }}>How To Use The App</h2>
+        <p>
+          Import and view your OSRS Collection Log data either by fetching it via the 
+          <strong> collectionlog.net</strong> API or by manually uploading a <em>.json</em> file.
+        </p>
+      </div>
+
+      {/* 3) Upload sections (tabs) at the bottom */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <div className="flex" style={{ borderBottom: "4px solid #5c5647" }}>
           <button
