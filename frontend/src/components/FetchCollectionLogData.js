@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { updateNextFastestItem } from '../utils/calculations';
-import { calculateCategoryCounts } from '../utils/collectionLogUtils';
 import ItemImage from './ItemImage';
 
 // Divider component: spans full width of the overview container
@@ -16,14 +15,6 @@ const Divider = () => (
   />
 );
 
-const defaultCategoryData = [
-  { name: 'Bosses',    iconId: 12819, color: '#ffcc00' },
-  { name: 'Raids',     iconId: 20997, color: '#ffcc00' },
-  { name: 'Clues',     iconId: 19730, color: '#ffcc00' },
-  { name: 'Minigames', iconId: 4509,  color: '#ffcc00' },
-  { name: 'Other',     iconId: 21439, color: '#ffcc00' },
-];
-
 function FetchCollectionLogData({ onUploadComplete }) {
   const [username, setUsername] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -31,13 +22,19 @@ function FetchCollectionLogData({ onUploadComplete }) {
   const [lastUpdated, setLastUpdated] = useState(localStorage.getItem('collectionLogLastUpdated'));
   const [activeTab, setActiveTab] = useState('api');
   
-  // Lazy initializer for computed category counts from log data
-  const [categoryCounts, setCategoryCounts] = useState(() => {
-    const savedLogData = JSON.parse(localStorage.getItem('collectionLogData'));
-    return savedLogData ? calculateCategoryCounts(savedLogData) : {};
-  });
+  // Get the saved log data
+  const savedLogData = JSON.parse(localStorage.getItem('collectionLogData'));
+  const displayedUsername = savedLogData?.username || "No Collection Log Data";
+  // Use the totals directly from the file.
+  const uniqueObtained = savedLogData?.uniqueObtained ?? 0;
+  const uniqueItems = savedLogData?.uniqueItems ?? 0;
 
-  // Window size for scaling
+  // Next fastest item from localStorage
+  const [nextFastestItem, setNextFastestItem] = useState(
+    JSON.parse(localStorage.getItem('nextFastestItem')) || { id: null, name: '-' }
+  );
+
+  // Window size state for scaling
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -48,19 +45,10 @@ function FetchCollectionLogData({ onUploadComplete }) {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+  
+  // Define container dimensions based on the window size.
   const containerWidth = Math.floor(windowSize.width * 0.9);
   const containerHeight = Math.floor(windowSize.height * 0.8);
-
-  // Retrieve saved log data for overview details
-  const savedLogData = JSON.parse(localStorage.getItem('collectionLogData'));
-  const displayedUsername = savedLogData?.username || "No Collection Log Data";
-  const uniqueObtained = savedLogData?.uniqueObtained ?? 0;
-  const uniqueItems = savedLogData?.uniqueItems ?? 0;
-
-  // Next fastest item from localStorage
-  const [nextFastestItem, setNextFastestItem] = useState(
-    JSON.parse(localStorage.getItem('nextFastestItem')) || { id: null, name: '-' }
-  );
 
   // Recalculate next fastest item when active tab changes to 'upload'
   useEffect(() => {
@@ -123,11 +111,9 @@ function FetchCollectionLogData({ onUploadComplete }) {
           }
         });
       }
-      localStorage.setItem('collectionLogData', JSON.stringify(logData));
       
-      // Update computed category counts from logData
-      const counts = calculateCategoryCounts(logData);
-      setCategoryCounts(counts);
+      // We now rely on the file's provided totals.
+      localStorage.setItem('collectionLogData', JSON.stringify(logData));
       
       const newMode = logData.accountType === "IRONMAN";
       localStorage.setItem('isIron', JSON.stringify(newMode));
@@ -224,79 +210,14 @@ function FetchCollectionLogData({ onUploadComplete }) {
           alignItems: "center",
         }}
       >
-        {/* Top summary */}
+        {/* Top summary using overall totals from the file */}
         <div style={{ fontSize: "1.4rem", fontWeight: "bold", marginBottom: "1rem", textAlign: "center" }}>
           {displayedUsername}'s Collection Log - {uniqueObtained}/{uniqueItems}
         </div>
-        {/* Divider spanning full width */}
+        {/* Divider */}
         <Divider />
 
-        {/* Row of 5 square category blocks */}
-        <div
-          style={{
-            width: "100%",
-            display: "flex",
-            gap: "0.5rem",
-            justifyContent: "space-around",
-            flexWrap: "wrap",
-            margin: "1rem 0",
-          }}
-        >
-          {defaultCategoryData.map((cat) => {
-            const obtained = categoryCounts[cat.name]?.obtained ?? 0;
-            const total = categoryCounts[cat.name]?.total ?? 0;
-            const fractionText = `${obtained}/${total}`;
-            const fraction = total > 0 ? obtained / total : 0;
-            const barWidth = fraction * 100;
-            return (
-              <div
-                key={cat.name}
-                style={{
-                  backgroundColor: "#28251e",
-                  border: "2px solid #5c5647",
-                  borderRadius: "8px",
-                  aspectRatio: "1 / 1",
-                  width: "120px",
-                  minWidth: "120px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "0.5rem",
-                }}
-              >
-                {/* Category Name */}
-                <div style={{ fontSize: "0.9rem", color: "#fc961f", marginBottom: "0.3rem" }}>
-                  {cat.name}
-                </div>
-                {/* Icon */}
-                <ItemImage itemId={cat.iconId} fallbackName={cat.name} className="w-6 h-6" disableLink={true} />
-                {/* Fraction text */}
-                <div style={{ marginTop: "0.2rem", fontSize: "0.8rem", color: "#00ff00" }}>
-                  {fractionText}
-                </div>
-                {/* Progress bar */}
-                <div
-                  style={{
-                    marginTop: "0.2rem",
-                    width: "80%",
-                    height: "6px",
-                    backgroundColor: "#453c31",
-                    border: "1px solid #5c5647",
-                    borderRadius: "2px",
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div style={{ position: "absolute", top: 0, left: "25%", width: "1px", height: "100%", backgroundColor: "#5c5647" }} />
-                  <div style={{ position: "absolute", top: 0, left: "50%", width: "1px", height: "100%", backgroundColor: "#5c5647" }} />
-                  <div style={{ position: "absolute", top: 0, left: "75%", width: "1px", height: "100%", backgroundColor: "#5c5647" }} />
-                  <div style={{ position: "absolute", top: 0, left: 0, width: `${barWidth}%`, height: "100%", backgroundColor: cat.color }} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        {/* Note: Per-category blocks have been removed */}
 
         {/* Next Fastest Item container */}
         <div
