@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { updateNextFastestItem } from '../utils/calculations';
-import { calculateCategoryCounts, getRecentItems } from '../utils/collectionLogUtils';
+import { calculateCategoryCounts } from '../utils/collectionLogUtils';
 import ItemImage from './ItemImage';
 
 // Divider component: spans full width of the overview container
@@ -24,25 +24,6 @@ const defaultCategoryData = [
   { name: 'Other',     iconId: 21439, color: '#ffcc00' },
 ];
 
-/**
- * Example array for 12 most recently obtained items.
- * In a real scenario, you'd compute these from your log data.
- */
-const defaultRecentItems = [
-  { id: 20001, name: "Item 1" },
-  { id: 20002, name: "Item 2" },
-  { id: 20003, name: "Item 3" },
-  { id: 20004, name: "Item 4" },
-  { id: 20005, name: "Item 5" },
-  { id: 20006, name: "Item 6" },
-  { id: 20007, name: "Item 7" },
-  { id: 20008, name: "Item 8" },
-  { id: 20009, name: "Item 9" },
-  { id: 20010, name: "Item 10" },
-  { id: 20011, name: "Item 11" },
-  { id: 20012, name: "Item 12" },
-];
-
 function FetchCollectionLogData({ onUploadComplete }) {
   const [username, setUsername] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -50,9 +31,11 @@ function FetchCollectionLogData({ onUploadComplete }) {
   const [lastUpdated, setLastUpdated] = useState(localStorage.getItem('collectionLogLastUpdated'));
   const [activeTab, setActiveTab] = useState('api');
   
-  // New states for computed values from log data
-  const [categoryCounts, setCategoryCounts] = useState({});
-  const [recentItemsState, setRecentItemsState] = useState(defaultRecentItems);
+  // Lazy initializer for computed category counts from log data
+  const [categoryCounts, setCategoryCounts] = useState(() => {
+    const savedLogData = JSON.parse(localStorage.getItem('collectionLogData'));
+    return savedLogData ? calculateCategoryCounts(savedLogData) : {};
+  });
 
   // Window size for scaling
   const [windowSize, setWindowSize] = useState({
@@ -68,7 +51,7 @@ function FetchCollectionLogData({ onUploadComplete }) {
   const containerWidth = Math.floor(windowSize.width * 0.9);
   const containerHeight = Math.floor(windowSize.height * 0.8);
 
-  // Retrieve saved log data
+  // Retrieve saved log data for overview details
   const savedLogData = JSON.parse(localStorage.getItem('collectionLogData'));
   const displayedUsername = savedLogData?.username || "No Collection Log Data";
   const uniqueObtained = savedLogData?.uniqueObtained ?? 0;
@@ -142,11 +125,9 @@ function FetchCollectionLogData({ onUploadComplete }) {
       }
       localStorage.setItem('collectionLogData', JSON.stringify(logData));
       
-      // Update computed category counts and recent items from logData
+      // Update computed category counts from logData
       const counts = calculateCategoryCounts(logData);
       setCategoryCounts(counts);
-      const recent = getRecentItems(logData, 12);
-      setRecentItemsState(recent);
       
       const newMode = logData.accountType === "IRONMAN";
       localStorage.setItem('isIron', JSON.stringify(newMode));
@@ -262,7 +243,6 @@ function FetchCollectionLogData({ onUploadComplete }) {
           }}
         >
           {defaultCategoryData.map((cat) => {
-            // Use computed counts if available; otherwise, fall back to 0.
             const obtained = categoryCounts[cat.name]?.obtained ?? 0;
             const total = categoryCounts[cat.name]?.total ?? 0;
             const fractionText = `${obtained}/${total}`;
@@ -295,7 +275,7 @@ function FetchCollectionLogData({ onUploadComplete }) {
                 <div style={{ marginTop: "0.2rem", fontSize: "0.8rem", color: "#00ff00" }}>
                   {fractionText}
                 </div>
-                {/* Small progress bar with tick marks */}
+                {/* Progress bar */}
                 <div
                   style={{
                     marginTop: "0.2rem",
@@ -318,36 +298,7 @@ function FetchCollectionLogData({ onUploadComplete }) {
           })}
         </div>
 
-        {/* Latest Collections container, scaling with overview container */}
-        <div
-          style={{
-            width: "90%",
-            backgroundColor: "#28251e",
-            border: "2px solid #5c5647",
-            borderRadius: "8px",
-            marginBottom: "1rem",
-            padding: "0.5rem",
-            textAlign: "center",
-          }}
-        >
-          <div style={{ fontSize: "1rem", color: "#fc961f", marginBottom: "0.3rem" }}>
-            Latest Collections
-          </div>
-          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
-            {recentItemsState.slice(0, 12).map((item) => (
-              <ItemImage
-                key={item.id}
-                itemId={item.id}
-                fallbackName={item.name}
-                className="w-6 h-6"
-                disableLink={true}
-                style={{ opacity: 1 }}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Next Fastest Item container, scaling with overview container */}
+        {/* Next Fastest Item container */}
         <div
           style={{
             backgroundColor: "#28251e",
@@ -386,7 +337,7 @@ function FetchCollectionLogData({ onUploadComplete }) {
           )}
         </div>
 
-        {/* Reset button, scaling with overview container */}
+        {/* Reset button */}
         <button
           onClick={handleResetData}
           onMouseEnter={handleButtonMouseEnter}
