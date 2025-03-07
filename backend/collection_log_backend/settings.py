@@ -43,14 +43,15 @@ DEBUG = env('DJANGO_DEBUG')
 # Allowed hosts are provided as a comma-separated list in the .env file.
 ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS')
 
-# CORS settings (adjust as necessary)
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-]
-
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:3000',
-]
+# Conditionally set CORS and CSRF settings based on the environment
+if DJANGO_ENV == 'production':
+    # Production: load from .env.production
+    CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS')
+    CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS')
+else:
+    # Development settings
+    CORS_ALLOWED_ORIGINS = ['http://localhost:3000']
+    CSRF_TRUSTED_ORIGINS = ['http://localhost:3000']
 
 # Application definition
 INSTALLED_APPS = [
