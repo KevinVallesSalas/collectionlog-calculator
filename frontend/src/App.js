@@ -6,6 +6,9 @@ import CollectionLog from './components/CollectionLog';
 import CompletionTime from './components/CompletionTime';
 import { ItemsProvider } from './contexts/ItemsProvider';
 
+// Define the backend URL from an environment variable, defaulting to local dev URL if not set
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
+
 function App() {
   const [activeTab, setActiveTab] = useState('upload');
   const [refreshLog, setRefreshLog] = useState(false);
@@ -21,13 +24,23 @@ function App() {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'upload':
-        return <FetchCollectionlogData onUploadComplete={handleUploadComplete} />;
+        return (
+          <FetchCollectionlogData
+            backendUrl={BACKEND_URL}
+            onUploadComplete={handleUploadComplete}
+          />
+        );
       case 'collection':
         return <CollectionLog refreshLog={refreshLog} />;
       case 'completion':
         return <CompletionTime userCompletionRates={userCompletionRates} />;
       default:
-        return <FetchCollectionlogData onUploadComplete={handleUploadComplete} />;
+        return (
+          <FetchCollectionlogData
+            backendUrl={BACKEND_URL}
+            onUploadComplete={handleUploadComplete}
+          />
+        );
     }
   };
 

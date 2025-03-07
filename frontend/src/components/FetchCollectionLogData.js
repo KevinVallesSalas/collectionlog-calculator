@@ -3,6 +3,9 @@ import { useTransition, animated } from 'react-spring';
 import { updateNextFastestItem } from '../utils/calculations';
 import ItemImage from './ItemImage';
 
+// Define the backend URL from environment variables with fallback to local dev URL
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://127.0.0.1:8000';
+
 // Divider component with full container width
 const Divider = () => (
   <div
@@ -135,8 +138,8 @@ function FetchCollectionLogData({ onUploadComplete }) {
       localStorage.setItem('collectionLogLastUpdated', now);
       setLastUpdated(now);
       Promise.all([
-        fetch('http://127.0.0.1:8000/log_importer/get-activities-data/'),
-        fetch('http://127.0.0.1:8000/log_importer/get-completion-rates/')
+        fetch(`${BACKEND_URL}/log_importer/get-activities-data/`),
+        fetch(`${BACKEND_URL}/log_importer/get-completion-rates/`)
       ])
         .then(async ([activitiesRes, ratesRes]) => {
           const activitiesJson = await activitiesRes.json();
@@ -158,13 +161,13 @@ function FetchCollectionLogData({ onUploadComplete }) {
     }
   };
 
-  // .net API fetch
+  // .net API fetch for username-based data
   const handleFetchUserData = () => {
     if (!username.trim()) {
       setUploadStatus('Please enter a username.');
       return;
     }
-    fetch('http://127.0.0.1:8000/log_importer/collection-log/', {
+    fetch(`${BACKEND_URL}/log_importer/collection-log/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username }),
@@ -185,7 +188,7 @@ function FetchCollectionLogData({ onUploadComplete }) {
     }
     const formData = new FormData();
     formData.append('file', selectedFile);
-    fetch('http://127.0.0.1:8000/log_importer/collection-log/', {
+    fetch(`${BACKEND_URL}/log_importer/collection-log/`, {
       method: 'POST',
       body: formData,
     })

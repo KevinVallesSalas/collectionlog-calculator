@@ -1,3 +1,4 @@
 # Ignore environment variable files
 /backend/.env.development
 /backend/.env.production
+/frontend/.env.development

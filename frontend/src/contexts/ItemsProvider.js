@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { preloadImages } from "../utils/preloadImages";
 
+// Define the backend URL from the environment with a fallback to local
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://127.0.0.1:8000";
+
 const ItemsContext = createContext(null);
 
 export function useItemsData() {
@@ -12,7 +15,7 @@ export function ItemsProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/log_importer/items-json/")
+    fetch(`${BACKEND_URL}/log_importer/items-json/`)
       .then((res) => {
         if (!res.ok) {
           throw new Error(`HTTP error! Status: ${res.status}`);
@@ -21,7 +24,6 @@ export function ItemsProvider({ children }) {
       })
       .then((data) => {
         setItemsData(data);
-        // Render immediately since the default page doesn't need these images.
         setLoading(false);
         // Kick off image preloading in the background.
         const imageEntries = Object.values(data).map((item) => ({
