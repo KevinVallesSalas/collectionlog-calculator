@@ -14,5 +14,5 @@ COPY . .
 # Expose the port specified by the environment variable
 EXPOSE ${PORT}
 
-# Run Gunicorn as the WSGI server
-CMD ["gunicorn", "collection_log_backend.wsgi:application", "--bind", "0.0.0.0:${PORT}"]
+# Run Gunicorn as the WSGI server using shell form for CMD
+CMD gunicorn collection_log_backend.wsgi:application --bind 0.0.0.0:$PORT
