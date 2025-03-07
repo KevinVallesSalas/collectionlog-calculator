@@ -10,23 +10,40 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 from pathlib import Path
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Initialize environment variables with django-environ
+env = environ.Env(
+    # Set casting and default values
+    DEBUG=(bool, False)
+)
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
+# Choose the appropriate .env file based on the DJANGO_ENV environment variable.
+# Defaults to 'development' if DJANGO_ENV is not set.
+DJANGO_ENV = os.environ.get('DJANGO_ENV', 'development')
+if DJANGO_ENV == 'production':
+    env_file = os.path.join(BASE_DIR, '.env.production')
+else:
+    env_file = os.path.join(BASE_DIR, '.env.development')
+
+# Read the .env file
+environ.Env.read_env(env_file)
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=h1v8!@0^qn4x17pnst%yklektst^ale^6pzy-_$*rf4qw20%-'
+SECRET_KEY = env('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env('DJANGO_DEBUG')
 
-ALLOWED_HOSTS = []
+# Allowed hosts are provided as a comma-separated list in the .env file.
+ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS')
 
+# CORS settings (adjust as necessary)
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
 ]
@@ -36,7 +53,6 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -82,7 +98,6 @@ WSGI_APPLICATION = 'collection_log_backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -90,10 +105,8 @@ DATABASES = {
     }
 }
 
-
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -109,23 +122,15 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
-import os
-
 STATIC_URL = "/static/"
 
 STATICFILES_DIRS = [
@@ -134,5 +139,4 @@ STATICFILES_DIRS = [
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
