@@ -10,6 +10,10 @@ The Collection Log App allows users to track their collection log progress, view
 - Sort completion times by activity name or time to next log slot.
 - Stores data locally for easy retrieval.
 
+## Live Demo
+You can access a live version of the Collection Log App at:
+[https://collection-log-advisor.onrender.com](https://collection-log-advisor.onrender.com/)
+
 ## Updating Completion Rates
 To update the completion rates used in the application:
 1. Export the completion rates from the **Collection Log Advisor** spreadsheet found in the **Collection Log Discord**.
@@ -23,7 +27,7 @@ To update the completion rates used in the application:
 ## Installation
 1. Clone the repository:
    ```sh
-   git clone https://github.com/yourusername/collectionlog-calculator.git
+   git clone https://github.com/KevinVallesSalas/collectionlog-calculator.git
    ```
 2. Navigate to the project directory:
    ```sh
@@ -37,19 +41,27 @@ To update the completion rates used in the application:
    cd frontend && npm install
    ```
 
-## Running the Project
-1. Start the Django backend:
-   ```sh
-   cd backend
-   python manage.py runserver
-   ```
-2. Start the frontend:
-   ```sh
-   cd frontend
-   npm start
-   ```
-3. Open `http://localhost:3000` in your browser.
+## Running the Project with Docker
+You can run the entire application using Docker. Follow these steps:
+
+1. **Ensure Docker Desktop is Running:**
+   - Make sure Docker Desktop is running on your machine.
+   - If you're on Windows, ensure that Docker is set to use Linux containers.
+
+2. **Build and Run Using Docker Compose:**
+   - In the root directory of the repository, run:
+     ```sh
+     docker-compose up --build
+     ```
+   - This command builds the Docker images defined in your `docker-compose.yml` file and starts the containers.
+
+3. **Access the Application:**
+   - Once the containers are running, open your browser and navigate to:
+     - The frontend at `http://localhost:3000`
+     - The backend (if needed) at `http://localhost:8000`
+
+## Live Demo
+You can access a live version of the Collection Log App at: [https://collection-log-advisor.onrender.com/](https://collection-log-advisor.onrender.com/)
 
 ## Contributing
 Feel free to submit issues or contribute to the project by creating pull requests!
-
