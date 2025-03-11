@@ -2,3 +2,35 @@
 /backend/.env.development
 /backend/.env.production
 /frontend/.env.development
+
+# Python bytecode and caches
+**/__pycache__/
+*.py[cod]
+
+# Virtual environments (if created locally in your project)
+backend/venv/
+backend/.venv/
+
+# Django local settings and SQLite database (if applicable)
+backend/db.sqlite3
+backend/db.sqlite3-journal
+backend/local_settings.py
+
+# Node modules and build artifacts
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/
+*.code-workspace
+
+
+# Log and temporary files
+*.log
+*.tmp
+*.bak
