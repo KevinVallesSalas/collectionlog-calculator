@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from "react";
 import ItemImage from "./ItemImage";
 
-// Updated scrollbar styles: wider and stronger 3D effect
+// Helper function to format names to Capital Case
+function formatName(name) {
+  return name
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 const CustomScrollbarStyles = () => (
   <style>{`
     /* For WebKit-based browsers (Chrome, Safari, etc.) */
@@ -32,38 +39,39 @@ const CustomScrollbarStyles = () => (
   `}</style>
 );
 
-// Helper sorting function that ignores a leading "the"
-const sortIgnoreThe = (a, b) => {
-  const cleanA = a.toLowerCase().replace(/^the\s+/, "");
-  const cleanB = b.toLowerCase().replace(/^the\s+/, "");
-  return cleanA.localeCompare(cleanB);
-};
-
 function CollectionLog() {
   const [logData, setLogData] = useState(null);
   const [groupedItems, setGroupedItems] = useState({});
-  const [activeSection, setActiveSection] = useState("Bosses");
+  const [activeSection, setActiveSection] = useState("");
   const [activeSubsection, setActiveSubsection] = useState(null);
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
   });
-  const [tooltip, setTooltip] = useState({ visible: false, text: "", x: 0, y: 0 });
+  const [tooltip, setTooltip] = useState({
+    visible: false,
+    text: "",
+    x: 0,
+    y: 0,
+  });
 
-  // Load collection log data from localStorage
+  // Load data from localStorage on mount
   useEffect(() => {
     const savedData = JSON.parse(localStorage.getItem("collectionLogData"));
     if (savedData) {
       setLogData(savedData);
-      setGroupedItems(savedData.sections || {});
-      const subs = Object.keys(savedData.sections?.[activeSection] || {});
-      if (subs.length > 0) {
-        setActiveSubsection(subs[0]);
+      const sections = savedData.sections || {};
+      setGroupedItems(sections);
+      const sectionKeys = Object.keys(sections);
+      if (sectionKeys.length > 0) {
+        setActiveSection(sectionKeys[0]);
+        const subs = Object.keys(sections[sectionKeys[0]]);
+        setActiveSubsection(subs.length > 0 ? subs[0] : null);
       }
     }
-  }, [activeSection]);
+  }, []);
 
-  // Update activeSubsection when activeSection or groupedItems changes
+  // When activeSection changes, update activeSubsection to first key if available
   useEffect(() => {
     if (groupedItems[activeSection]) {
       const subs = Object.keys(groupedItems[activeSection]);
@@ -80,26 +88,41 @@ function CollectionLog() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Container dimensions:
+  // Dimensions for the container and grid
   const containerWidth = windowSize.width * 0.9;
   const containerHeight = 750; // fixed
-
-  // Main area width is 70% of the container width.
   const mainContentWidth = containerWidth * 0.7;
-
-  // Grid settings:
   const columns = 6;
-  const imageSize = 64; // each item image cell
-
-  // Calculate gap for columns
-  const gapBetween = (mainContentWidth / columns) - imageSize;
+  const imageSize = 64;
+  const gapBetween = mainContentWidth / columns - imageSize;
   const edgePadding = gapBetween / 2;
-  const verticalGap = 6; // fixed vertical gap
+  const verticalGap = 6;
+
+  // Unique overall obtained counts from logData for the header
+  const uniqueObtained = logData?.uniqueObtained || 0;
+  const uniqueItems = logData?.uniqueItems || 0;
+  const headerObtainedColor =
+    uniqueObtained === 0
+      ? "#a50000"
+      : uniqueObtained === uniqueItems && uniqueItems > 0
+      ? "#00ff00"
+      : "#f1f100";
+
+  // For grid display, get current section/subsection items safely
+  const currentItems =
+    groupedItems[activeSection]?.[activeSubsection]?.items || [];
+  const sectionObtained = currentItems.filter((item) => item.count > 0).length;
+  const sectionTotal = currentItems.length;
+  const sectionObtainedColor =
+    sectionObtained === 0
+      ? "#a50000"
+      : sectionObtained === sectionTotal && sectionTotal > 0
+      ? "#00ff00"
+      : "#f1f100";
 
   return (
     <>
       <CustomScrollbarStyles />
-
       <div className="mx-auto my-5 p-4 relative">
         {tooltip.visible && (
           <div
@@ -112,7 +135,9 @@ function CollectionLog() {
           >
             <div className="font-bold">{tooltip.text.split("\n")[0]}</div>
             {tooltip.text.split("\n")[1] && (
-              <div className="text-gray-300">{tooltip.text.split("\n")[1]}</div>
+              <div className="text-gray-300">
+                {tooltip.text.split("\n")[1]}
+              </div>
             )}
           </div>
         )}
@@ -125,7 +150,7 @@ function CollectionLog() {
             borderColor: "#5c5647",
             backgroundColor: "#494034",
             color: "#fc961f",
-            textShadow: "1px 1px 0 #000"
+            textShadow: "1px 1px 0 #000",
           }}
         >
           {/* Main header */}
@@ -137,10 +162,13 @@ function CollectionLog() {
               backgroundColor: "#494034",
             }}
           >
-            {(logData?.username && logData.username !== "Manual Upload")
+            {logData?.username
               ? `${logData.username}'s Collection Log`
-              : "Manually Uploaded Collection Log"}{" "}
-            - {logData?.uniqueObtained || 0}/{logData?.uniqueItems || 0}
+              : "Collection Log"}{" "}
+            - {" "}
+            <span style={{ color: headerObtainedColor }}>
+              {uniqueObtained}/{uniqueItems}
+            </span>
           </div>
 
           {/* Section Tabs */}
@@ -159,13 +187,13 @@ function CollectionLog() {
                   `}
                   style={{ color: "#fc961f" }}
                 >
-                  {section}
+                  {formatName(section)}
                 </button>
               );
             })}
           </div>
 
-          {/* Bottom container with sidebar and main content */}
+          {/* Main container */}
           <div
             className="flex flex-grow min-h-0 border"
             style={{
@@ -173,26 +201,29 @@ function CollectionLog() {
               borderTop: "0px",
             }}
           >
-            {/* Left Sidebar */}
+            {/* Sidebar */}
             <aside
               className="overflow-y-auto text-sm custom-scrollbar"
               style={{
                 width: "30%",
                 backgroundColor: "#494034",
                 borderRight: "1px solid #5c5647",
-                padding: 0
+                padding: 0,
               }}
             >
               {groupedItems[activeSection] &&
               Object.keys(groupedItems[activeSection]).length > 0 ? (
                 <ul style={{ margin: 0, padding: 0 }}>
                   {Object.keys(groupedItems[activeSection])
-                    .sort(activeSection === "Bosses" ? sortIgnoreThe : undefined)
+                    .sort()
                     .map((subsection, index) => {
-                      const items = groupedItems[activeSection][subsection]?.items || [];
-                      const obtainedCount = items.filter((i) => i.obtained).length;
-                      const totalItems = items.length;
-                      const isComplete = obtainedCount === totalItems;
+                      const items =
+                        groupedItems[activeSection][subsection]?.items || [];
+                      const obtainedCountSub = items.filter(
+                        (item) => item.count > 0
+                      ).length;
+                      const totalItemsSub = items.length;
+                      const isComplete = obtainedCountSub === totalItemsSub;
                       const isSelected = subsection === activeSubsection;
                       const rowBackground = isSelected
                         ? "#6f675e"
@@ -200,7 +231,10 @@ function CollectionLog() {
                         ? "#453c31"
                         : "#564d42";
                       return (
-                        <li key={subsection} style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                        <li
+                          key={subsection}
+                          style={{ listStyle: "none", margin: 0, padding: 0 }}
+                        >
                           <button
                             onClick={() => setActiveSubsection(subsection)}
                             className="w-full text-left"
@@ -210,10 +244,10 @@ function CollectionLog() {
                               textShadow: "inherit",
                               border: "none",
                               padding: "0.5rem",
-                              display: "block"
+                              display: "block",
                             }}
                           >
-                            {subsection}
+                            {formatName(subsection)}
                           </button>
                         </li>
                       );
@@ -226,14 +260,15 @@ function CollectionLog() {
               )}
             </aside>
 
-            {/* Main Content Area */}
+            {/* Main Content */}
             <main
               className="flex-grow overflow-y-auto text-sm custom-scrollbar"
               style={{ backgroundColor: "#494034", padding: 0 }}
             >
-              {activeSubsection && groupedItems[activeSection][activeSubsection] ? (
+              {activeSubsection &&
+              groupedItems[activeSection]?.[activeSubsection] ? (
                 <>
-                  {/* Section header with fixed padding */}
+                  {/* Section Header */}
                   <div
                     style={{
                       padding: "12px",
@@ -241,28 +276,20 @@ function CollectionLog() {
                       marginBottom: "12px",
                     }}
                   >
-                    <h2 className="font-bold text-base mb-1" style={{ color: "#fc961f" }}>
-                      {activeSubsection}
+                    <h2
+                      className="font-bold text-base mb-1"
+                      style={{ color: "#fc961f" }}
+                    >
+                      {formatName(activeSubsection)}
                     </h2>
-                    {(() => {
-                      const items = groupedItems[activeSection][activeSubsection]?.items || [];
-                      const obtainedCount = items.filter((item) => item.obtained).length;
-                      const totalItems = items.length;
-                      let obtainedColor = "#a50000";
-                      if (obtainedCount === totalItems && totalItems > 0) {
-                        obtainedColor = "#00ff00";
-                      } else if (obtainedCount > 0 && obtainedCount < totalItems) {
-                        obtainedColor = "#f1f100";
-                      }
-                      return (
-                        <p className="mb-1">
-                          Obtained:{" "}
-                          <span style={{ color: obtainedColor }}>
-                            {obtainedCount}/{totalItems}
-                          </span>
-                        </p>
-                      );
-                    })()}
+                    <p className="mb-1">
+                      Obtained:{" "}
+                      <span style={{ color: sectionObtainedColor }}>
+                        {sectionObtained}/{sectionTotal}
+                      </span>
+                    </p>
+                    {/*
+                    // Kill count functionality is commented out for now.
                     {(() => {
                       const killCount = groupedItems[activeSection][activeSubsection]?.killCount || {};
                       if (killCount.name && killCount.amount > 0) {
@@ -275,8 +302,9 @@ function CollectionLog() {
                       }
                       return null;
                     })()}
+                    */}
                   </div>
-                  {/* Grid container wrapper with adjusted left/right padding */}
+                  {/* Grid */}
                   <div style={{ paddingLeft: edgePadding, paddingRight: edgePadding }}>
                     <div
                       className="grid"
@@ -284,17 +312,19 @@ function CollectionLog() {
                         gridTemplateColumns: `repeat(${columns}, ${imageSize}px)`,
                         gridAutoRows: `${imageSize}px`,
                         columnGap: gapBetween,
-                        rowGap: verticalGap
+                        rowGap: verticalGap,
                       }}
                     >
-                      {groupedItems[activeSection][activeSubsection].items.map((item, index) => (
+                      {currentItems.map((item, index) => (
                         <div
                           key={index}
                           className="relative group"
                           onMouseEnter={(e) => {
                             let tooltipText = item.name;
-                            if (item.obtained && item.obtainedAt) {
-                              tooltipText += `\nObtained: ${new Date(item.obtainedAt)
+                            if (item.count > 0 && item.date) {
+                              tooltipText += `\nObtained: ${new Date(
+                                item.date
+                              )
                                 .toISOString()
                                 .split("T")[0]}`;
                             }
@@ -305,15 +335,17 @@ function CollectionLog() {
                               y: e.clientY + 10,
                             });
                           }}
-                          onMouseLeave={() => setTooltip({ visible: false, text: "", x: 0, y: 0 })}
+                          onMouseLeave={() =>
+                            setTooltip({ visible: false, text: "", x: 0, y: 0 })
+                          }
                         >
                           <ItemImage
                             itemId={item.id}
                             fallbackName={item.name}
-                            className={item.obtained ? "opacity-100" : "opacity-30"}
+                            className={item.count > 0 ? "opacity-100" : "opacity-30"}
                             style={{ width: "100%", height: "100%" }}
                           />
-                          {item.quantity > 1 && (
+                          {item.count > 1 && (
                             <span
                               className="absolute top-0 left-0 text-xs font-bold px-1"
                               style={{
@@ -321,7 +353,7 @@ function CollectionLog() {
                                 textShadow: "2px 2px 2px rgba(0, 0, 0, 0.5)",
                               }}
                             >
-                              {item.quantity}
+                              {item.count}
                             </span>
                           )}
                         </div>
