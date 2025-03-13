@@ -5,85 +5,122 @@ from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):
     help = (
-        "Generate or update items.json by calling the external Collection Log "
-        "API endpoint, then parsing the returned JSON structure."
+        "Generate or update items.json and sections.json by fetching the new API "
+        "data for each major section (bosses, clues, minigames, raids, other)."
     )
 
     def handle(self, *args, **options):
-        # 1) Set the API URL for your sample user (update as needed)
-        api_url = "https://api.collectionlog.net/collectionlog/user/lonesoldier"
+        # Define the five major sections we want to fetch.
+        major_sections = ["bosses", "raids", "clues", "minigames", "other"]
 
-        # 2) Attempt the GET request
-        self.stdout.write(f"Requesting sample log data from: {api_url}")
-        try:
-            r = requests.get(api_url, timeout=10)
-            if r.status_code != 200:
-                self.stdout.write(self.style.ERROR(
-                    f"Failed to fetch data. Status code: {r.status_code}"
-                ))
-                return
-            sample_log_data = r.json()
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(
-                f"Exception while requesting {api_url}: {e}"
-            ))
-            return
+        # Base URL for the new API.
+        base_url = "https://templeosrs.com/api/collection-log/player_collection_log.php"
+        player = "Lonesoldier"  # update if needed
 
-        # 3) Safely navigate the JSON to get your tab data, e.g.:
-        #    The remote data might differ from your local 'sample_log_data.json'.
-        #    Adjust as needed for the actual structure returned by the API.
-        collection_log = sample_log_data.get("collectionLog", {})
-        tabs = collection_log.get("tabs", {})
+        # These are the constant query parameters.
+        base_params = {
+            "player": player,
+            "includenames": "1",
+            "includemissingitems": "1"
+        }
 
-        # 4) Locate items.json
+        # Determine file paths.
         current_dir = os.path.dirname(os.path.abspath(__file__))
         static_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "static"))
         items_json_path = os.path.join(static_dir, "items.json")
+        sections_json_path = os.path.join(static_dir, "sections.json")
 
-        # 5) Load or init items.json
+        # Load existing items.json if it exists, otherwise initialize an empty dict.
         if os.path.exists(items_json_path):
-            with open(items_json_path, "r", encoding="utf-8") as f:
-                items_data = json.load(f)
-            self.stdout.write(
-                f"Loaded existing items.json with {len(items_data)} items."
-            )
+            try:
+                with open(items_json_path, "r", encoding="utf-8") as f:
+                    items_data = json.load(f)
+                self.stdout.write(f"Loaded existing items.json with {len(items_data)} items.")
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(
+                    f"Warning: Could not load items.json, starting fresh. Error: {e}"
+                ))
+                items_data = {}
         else:
-            items_data = {}
             self.stdout.write("No existing items.json found. Creating a new one.")
+            items_data = {}
 
-        # 6) Traverse the tabs → sections → items
-        for tab_name, tab_content in tabs.items():
-            for section_name, section_data in tab_content.items():
-                items = section_data.get("items", [])
-                for item in items:
+        # Initialize our sections data structure.
+        sections_data = {}
+
+        # Counter for new items added.
+        new_items_count = 0
+
+        # Loop over each major section and fetch its data.
+        for section in major_sections:
+            self.stdout.write(f"Fetching data for major section: {section}")
+            params = base_params.copy()
+            params["categories"] = section
+
+            try:
+                response = requests.get(base_url, params=params, timeout=10)
+                if response.status_code != 200:
+                    self.stdout.write(self.style.ERROR(
+                        f"Failed to fetch {section}. Status code: {response.status_code}"
+                    ))
+                    continue
+                json_data = response.json()
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(
+                    f"Exception while fetching data for {section}: {e}"
+                ))
+                continue
+
+            # In the new API, the items are under the "data" key.
+            data = json_data.get("data", {})
+            items = data.get("items", {})
+
+            # Initialize the section key in sections_data.
+            sections_data[section] = {}
+
+            # Iterate through each sub-category within the current major section.
+            for subcategory, items_list in items.items():
+                # Initialize an empty list for this sub-category.
+                sections_data[section][subcategory] = []
+                for item in items_list:
                     item_id = item.get("id")
                     item_name = item.get("name")
                     if not item_id or not item_name:
                         continue
-
                     item_key = str(item_id)
-                    # If not in items_data, add it
+                    # Add item to items_data if it doesn't already exist.
                     if item_key not in items_data:
                         items_data[item_key] = {
                             "id": item_id,
                             "name": item_name,
-                            "imageUrl": ""
+                            "imageUrl": ""  # Optionally fill this later
                         }
+                        new_items_count += 1
                         self.stdout.write(f"Added item [{item_id}] {item_name}")
                     else:
-                        # Optionally update name if changed
-                        existing = items_data[item_key]
-                        if existing["name"] != item_name:
+                        # Optionally update the name if it has changed.
+                        if items_data[item_key]["name"] != item_name:
                             self.stdout.write(
                                 f"Updating name for itemId {item_id}: "
-                                f'"{existing["name"]}" -> "{item_name}"'
+                                f'{items_data[item_key]["name"]} -> {item_name}'
                             )
-                            existing["name"] = item_name
+                            items_data[item_key]["name"] = item_name
 
-        # 7) Save items.json
+                    # Append the item's ID (as string) to the current sub-category list.
+                    sections_data[section][subcategory].append(item_key)
+
+        # Save the updated items_data to items.json.
         with open(items_json_path, "w", encoding="utf-8") as f:
             json.dump(items_data, f, indent=2, ensure_ascii=False)
-
         self.stdout.write(self.style.SUCCESS(
-            f"\nSuccessfully updated items.json with {len(items_data)} items."
+            f"Successfully updated items.json with {len(items_data)} items."
         ))
+        if new_items_count:
+            self.stdout.write(self.style.SUCCESS(f"New items added: {new_items_count}"))
+        else:
+            self.stdout.write(self.style.SUCCESS("No new items added."))
+
+        # Save the sections_data to sections.json.
+        with open(sections_json_path, "w", encoding="utf-8") as f:
+            json.dump(sections_data, f, indent=2, ensure_ascii=False)
+        self.stdout.write(self.style.SUCCESS("Successfully updated sections.json."))
