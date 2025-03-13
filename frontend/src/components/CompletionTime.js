@@ -1,214 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { animated, useTransition } from 'react-spring';
-import { calculateActivityData, updateNextFastestItem } from '../utils/calculations';
-import ItemImage from './ItemImage';
+import { calculateActivityData, updateNextFastestItem, formatTimeInHMS, getTimeColor } from '../utils/calculations';
 import { useItemsData } from '../contexts/ItemsProvider';
-
-function DebouncedInput({ type = "text", value, onDebouncedChange, delay = 500, ...props }) {
-  const [internalValue, setInternalValue] = useState(value);
-  const timerRef = useRef(null);
-
-  useEffect(() => {
-    setInternalValue(value);
-  }, [value]);
-
-  const handleChange = (e) => {
-    const newValue = e.target.value;
-    setInternalValue(newValue);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => onDebouncedChange(newValue), delay);
-  };
-
-  const handleBlur = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    onDebouncedChange(internalValue);
-  };
-
-  return (
-    <input
-      type={type}
-      value={internalValue}
-      onChange={handleChange}
-      onBlur={handleBlur}
-      {...props}
-    />
-  );
-}
-
-function ActivityRow({
-  act,
-  expandedActivity,
-  toggleExpandedActivity,
-  activeRowRef,
-  itemsData,
-  rate,
-  isIron,
-  handleRateChange,
-  formatTimeInHMS,
-  getTimeColor
-}) {
-  const isActive = act.activity_name === expandedActivity;
-  const detailTransition = useTransition(isActive, {
-    from: { opacity: 0, maxHeight: 0 },
-    enter: { opacity: 1, maxHeight: 500 },
-    leave: { opacity: 0, maxHeight: 0 },
-    config: { duration: 1000 }
-  });
-
-  const wikiUrl =
-    itemsData &&
-    itemsData[String(act.fastest_slot_id)] &&
-    itemsData[String(act.fastest_slot_id)].wikiPageUrl
-      ? itemsData[String(act.fastest_slot_id)].wikiPageUrl
-      : `https://oldschool.runescape.wiki/w/${encodeURIComponent(act.fastest_slot_name)}`;
-
-  return (
-    <div
-      className="snap-center rounded-lg shadow-lg mb-4 overflow-hidden border"
-      style={{ borderColor: "#5c5647" }}
-      ref={isActive ? activeRowRef : null}
-    >
-      <div
-        className="grid grid-cols-3 gap-x-4 py-2 items-center cursor-pointer px-4 transition-colors duration-500"
-        style={{
-          backgroundColor: isActive ? "#6f675e" : "#494034",
-          borderBottom: "1px solid #5c5647"
-        }}
-        onClick={() => toggleExpandedActivity(act.activity_name)}
-      >
-        <div className="text-center">{act.activity_name}</div>
-        <div className="text-center" style={{ color: getTimeColor(act.time_to_next_log_slot) }}>
-          {formatTimeInHMS(act.time_to_next_log_slot)}
-        </div>
-        <div className="text-center">
-          {act.fastest_slot_name === '-' ? (
-            <span>-</span>
-          ) : (
-            <a
-              href={wikiUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center space-x-2 transition-transform duration-200 hover:scale-105 hover:underline"
-            >
-              {act.fastest_slot_id && (
-                <ItemImage
-                  itemId={act.fastest_slot_id}
-                  fallbackName={act.fastest_slot_name}
-                  className="w-8 h-8"
-                  disableLink={true}
-                />
-              )}
-              <span>{act.fastest_slot_name}</span>
-            </a>
-          )}
-        </div>
-      </div>
-      {detailTransition((animatedStyle, item) =>
-        item ? (
-          <animated.div
-            style={{
-              ...animatedStyle,
-              backgroundColor: "#6f675e",
-              borderBottom: "1px solid #5c5647"
-            }}
-            className="detail-section px-4 rounded-b-lg overflow-hidden"
-          >
-            <div className="py-2">
-              <div className="grid grid-cols-3 gap-4">
-                <div
-                  className="flex flex-col items-center gap-2 border rounded p-1"
-                  style={{ borderColor: !isIron ? "#ffcc00" : "transparent" }}
-                >
-                  <label className="block text-sm font-semibold text-center" style={{ color: "#fc961f" }}>
-                    Completions/hr (Main):
-                  </label>
-                  <DebouncedInput
-                    type="number"
-                    value={rate ? rate.user_completions_per_hour_main : ''}
-                    onDebouncedChange={(newVal) =>
-                      handleRateChange(act.activity_name, 'user_completions_per_hour_main', Number(newVal))
-                    }
-                    min="0"
-                    className="border p-1 rounded text-center"
-                    style={{ backgroundColor: "#28251e", color: "#fc961f", borderColor: "#5c5647" }}
-                    title={rate ? `Default: ${rate.default_completions_per_hour_main}` : ''}
-                  />
-                </div>
-                <div
-                  className="flex flex-col items-center gap-2 border rounded p-1"
-                  style={{ borderColor: isIron ? "#ffcc00" : "transparent" }}
-                >
-                  <label className="block text-sm font-semibold text-center" style={{ color: "#fc961f" }}>
-                    Completions/hr (Iron):
-                  </label>
-                  <DebouncedInput
-                    type="number"
-                    value={rate ? rate.user_completions_per_hour_iron : ''}
-                    onDebouncedChange={(newVal) =>
-                      handleRateChange(act.activity_name, 'user_completions_per_hour_iron', Number(newVal))
-                    }
-                    min="0"
-                    className="border p-1 rounded text-center"
-                    style={{ backgroundColor: "#28251e", color: "#fc961f", borderColor: "#5c5647" }}
-                    title={rate ? `Default: ${rate.default_completions_per_hour_iron}` : ''}
-                  />
-                </div>
-                <div className="flex flex-col items-center gap-2">
-                  <label className="block text-sm font-semibold text-center" style={{ color: "#fc961f" }}>
-                    Extra Time (hrs):
-                  </label>
-                  <DebouncedInput
-                    type="number"
-                    value={rate ? rate.user_extra_time : ''}
-                    onDebouncedChange={(newVal) =>
-                      handleRateChange(act.activity_name, 'user_extra_time', Number(newVal))
-                    }
-                    min="0"
-                    className="border p-1 rounded text-center"
-                    style={{ backgroundColor: "#28251e", color: "#fc961f", borderColor: "#5c5647" }}
-                    title={rate ? `Default: ${rate.default_extra_time} hours` : ''}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 mt-2">
-                <div>
-                  <label className="block text-sm font-semibold text-center" style={{ color: "#fc961f" }}>
-                    Notes:
-                  </label>
-                  <div
-                    className="border p-1 rounded text-center"
-                    style={{ backgroundColor: "#28251e", color: "#fc961f", borderColor: "#5c5647" }}
-                  >
-                    {rate ? rate.notes || '-' : '-'}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-center" style={{ color: "#fc961f" }}>
-                    Verification Source:
-                  </label>
-                  <div
-                    className="border p-1 rounded text-center"
-                    style={{ backgroundColor: "#28251e", color: "#fc961f", borderColor: "#5c5647" }}
-                  >
-                    {rate ? rate.verification_source || '-' : '-'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </animated.div>
-        ) : null
-      )}
-    </div>
-  );
-}
+import ActivityRow from './ActivityRow';
+import InfoPanels from './InfoPanels';
 
 function CompletionTime({ onRatesUpdated }) {
   const itemsData = useItemsData();
-  
   const [rawActivities, setRawActivities] = useState([]);
   const [activities, setActivities] = useState([]);
   const [userData, setUserData] = useState({ completed_items: [] });
@@ -219,8 +16,15 @@ function CompletionTime({ onRatesUpdated }) {
   const [isIron, setIsIron] = useState(() => JSON.parse(localStorage.getItem('isIron')) ?? false);
   const [userToggled, setUserToggled] = useState(() => JSON.parse(localStorage.getItem('userToggledMode')) ?? false);
   const [sortConfig, setSortConfig] = useState({ key: 'time_to_next_log_slot', direction: 'asc' });
-  
-  // Scaling: listen for window resize
+  const [disabledActivities, setDisabledActivities] = useState(() => {
+    return JSON.parse(localStorage.getItem('disabledActivities')) || {};
+  });
+
+  // These two states control which info panel is open.
+  const [showGeneral, setShowGeneral] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+
+  // Listen for window resize
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   useEffect(() => {
     const handleResize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
@@ -228,17 +32,17 @@ function CompletionTime({ onRatesUpdated }) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
   const containerWidth = windowSize.width * 0.9;
-  const containerHeight = 750; // fixed height
-  
-  // Load activities data from local storage
+  const containerHeight = 750;
+
+  // Load activities data
   useEffect(() => {
     const savedActivities = localStorage.getItem('activitiesData');
     if (savedActivities) {
       setRawActivities(JSON.parse(savedActivities));
     }
   }, []);
-  
-  // Load collection log data from local storage
+
+  // Load collection log data
   useEffect(() => {
     const savedLogData = JSON.parse(localStorage.getItem('collectionLogData'));
     if (!savedLogData || !savedLogData.sections) {
@@ -250,7 +54,7 @@ function CompletionTime({ onRatesUpdated }) {
       Object.values(section).forEach(activity => {
         if (activity.items && Array.isArray(activity.items)) {
           activity.items.forEach(item => {
-            if (item.obtained) {
+            if (item.count > 0) {
               collectedItems.push(item.id);
             }
           });
@@ -268,7 +72,7 @@ function CompletionTime({ onRatesUpdated }) {
       localStorage.setItem('userToggledMode', JSON.stringify(true));
     }
   }, [rawActivities, userToggled]);
-  
+
   // Load completion rates data from local storage
   useEffect(() => {
     const defaultRates = JSON.parse(localStorage.getItem('defaultCompletionRates')) || [];
@@ -286,8 +90,33 @@ function CompletionTime({ onRatesUpdated }) {
     }));
     setCompletionRates(mergedRates);
   }, []);
-  
-  // Handle changes to custom completion rates
+
+  // Calculate activities data from rawActivities
+  useEffect(() => {
+    if (rawActivities.length === 0) return;
+    const ratesMapping = completionRates.reduce((acc, rate) => {
+      acc[rate.activity_name] = {
+        completions_per_hour_main: rate.user_completions_per_hour_main,
+        completions_per_hour_iron: rate.user_completions_per_hour_iron,
+        extra_time_to_first_completion: rate.user_extra_time,
+      };
+      return acc;
+    }, {});
+    const updatedActivities = rawActivities.map(activity =>
+      calculateActivityData(activity, ratesMapping, isIron, userData)
+    );
+    updatedActivities.sort((a, b) => {
+      const aDisabled = disabledActivities[a.activity_name] || false;
+      const bDisabled = disabledActivities[b.activity_name] || false;
+      if (aDisabled && !bDisabled) return 1;
+      if (!aDisabled && bDisabled) return -1;
+      const aTime = typeof a.time_to_next_log_slot === 'number' ? a.time_to_next_log_slot : Infinity;
+      const bTime = typeof b.time_to_next_log_slot === 'number' ? b.time_to_next_log_slot : Infinity;
+      return aTime - bTime;
+    });
+    setActivities(updatedActivities);
+  }, [rawActivities, completionRates, isIron, userData, disabledActivities]);
+
   const handleRateChange = (activityName, key, value) => {
     const updatedRates = completionRates.map(rate =>
       rate.activity_name === activityName ? { ...rate, [key]: value } : rate
@@ -303,124 +132,60 @@ function CompletionTime({ onRatesUpdated }) {
     }, {});
     localStorage.setItem('userCompletionRates', JSON.stringify(storedRates));
     if (onRatesUpdated) onRatesUpdated(storedRates);
-  
-    // Immediately update next fastest item after a rate change.
     updateNextFastestItem();
-  
-    // After updating rates, snap the active row into view after 100ms
     setTimeout(() => {
       if (expandedActivity && activeRowRef.current) {
         activeRowRef.current.scrollIntoView({ behavior: 'auto', block: 'center' });
       }
     }, 100);
   };
-  
-  // Toggle the expanded activity
+
   const toggleExpandedActivity = (activityName) => {
     setExpandedActivity(expandedActivity === activityName ? null : activityName);
   };
-  
-  // Re-sort activities whenever relevant data changes
-  useEffect(() => {
-    if (!userData) return;
-    const ratesMapping = completionRates.reduce((acc, rate) => {
-      acc[rate.activity_name] = {
-        completions_per_hour_main: rate.user_completions_per_hour_main,
-        completions_per_hour_iron: rate.user_completions_per_hour_iron,
-        extra_time_to_first_completion: rate.user_extra_time
-      };
-      return acc;
-    }, {});
-    const newActivities = rawActivities.map(activity =>
-      calculateActivityData(activity, ratesMapping, isIron, userData)
-    );
-    if (sortConfig.key) {
-      newActivities.sort((a, b) => {
-        let valA = a[sortConfig.key];
-        let valB = b[sortConfig.key];
-        if (sortConfig.key === 'time_to_next_log_slot') {
-          const aIsDone = typeof valA !== 'number';
-          const bIsDone = typeof valB !== 'number';
-          if (aIsDone && !bIsDone) return 1;
-          if (!aIsDone && bIsDone) return -1;
-          if (aIsDone && bIsDone) return 0;
-        }
-        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-        return 0;
-      });
-    }
-    // Identify the "next fastest" item
-    const validActivities = newActivities.filter(
-      (act) => typeof act.time_to_next_log_slot === 'number' && act.time_to_next_log_slot > 0
-    );
-    const nextFastest = validActivities.length > 0 ? validActivities[0] : null;
-    if (nextFastest) {
-      localStorage.setItem('nextFastestItemName', nextFastest.fastest_slot_name);
-    } else {
-      localStorage.removeItem('nextFastestItemName');
-    }
-    setActivities(newActivities);
-  }, [rawActivities, isIron, userData, completionRates, sortConfig]);
-  
-  // Sort activities by the given key
+
+  const handleDisableActivity = (activityName) => {
+    setDisabledActivities(prev => {
+      const newState = { ...prev, [activityName]: !prev[activityName] };
+      localStorage.setItem('disabledActivities', JSON.stringify(newState));
+      return newState;
+    });
+  };
+
   const sortActivities = (key) => {
     let direction = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
-    const sorted = [...activities].sort((a, b) => {
+    const sortedActivities = [...activities].sort((a, b) => {
+      const aDisabled = disabledActivities[a.activity_name] || false;
+      const bDisabled = disabledActivities[b.activity_name] || false;
+      if (aDisabled && !bDisabled) return 1;
+      if (!aDisabled && bDisabled) return -1;
+      let valA = a[key];
+      let valB = b[key];
       if (key === 'time_to_next_log_slot') {
-        const aValue = a[key];
-        const bValue = b[key];
-        const aIsDone = typeof aValue !== 'number';
-        const bIsDone = typeof bValue !== 'number';
+        const aIsDone = typeof valA !== 'number';
+        const bIsDone = typeof valB !== 'number';
         if (aIsDone && !bIsDone) return 1;
         if (!aIsDone && bIsDone) return -1;
         if (aIsDone && bIsDone) return 0;
-        if (aValue > bValue) return direction === 'asc' ? 1 : -1;
-        if (aValue < bValue) return direction === 'asc' ? -1 : 1;
-        return 0;
-      } else {
-        let valA = a[key];
-        let valB = b[key];
-        if (valA > valB) return direction === 'asc' ? 1 : -1;
-        if (valA < valB) return direction === 'asc' ? -1 : 1;
-        return 0;
       }
+      if (valA > valB) return direction === 'asc' ? 1 : -1;
+      if (valA < valB) return direction === 'asc' ? -1 : 1;
+      return 0;
     });
-    setActivities(sorted);
     setSortConfig({ key, direction });
+    setActivities(sortedActivities);
   };
-  
-  // Convert days to HH:MM:SS
-  const formatTimeInHMS = (days) => {
-    if (days === 'Done!' || days === 'No available data') return days;
-    if (typeof days !== 'number' || days <= 0) return 'Done!';
-    let totalSeconds = Math.floor(days * 24 * 3600);
-    let hours = Math.floor(totalSeconds / 3600);
-    let minutes = Math.floor((totalSeconds % 3600) / 60);
-    let seconds = totalSeconds % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  };
-  
-  // Color logic for time to next log slot
-  const getTimeColor = (time) => {
-    if (time === 'Done!' || time === 'No available data' || typeof time !== 'number') return '#c4b59e';
-    const minTime = 0, maxTime = 2;
-    let t = (time - minTime) / (maxTime - minTime);
-    t = Math.min(Math.max(t, 0), 1);
-    const r = Math.round(t * 255);
-    const g = Math.round(255 - t * 255);
-    return `rgb(${r}, ${g}, 0)`;
-  };
-  
+
   return (
     <div
       className="mx-auto my-5 p-4"
       style={{
         width: containerWidth,
         height: containerHeight,
+        // Removed overflow hidden so the inner scroll container can scroll.
         backgroundColor: "#494034",
         border: "4px solid #5c5647",
         color: "#fc961f",
@@ -429,79 +194,87 @@ function CompletionTime({ onRatesUpdated }) {
         flexDirection: "column"
       }}
     >
-      {/* Title Section */}
-      <div className="flex flex-col items-center" style={{ flexShrink: 0 }}>
-        <h1 className="text-2xl font-bold text-center" style={{ color: "#fc961f" }}>
-          Completion Times by Activity
+      {/* Header + Info Buttons in one row */}
+      <div className="flex items-center justify-between w-full" style={{ flexShrink: 0 }}>
+        <h1 className="text-2xl font-bold" style={{ color: "#fc961f" }}>
+          Next Fastest Log Slot
         </h1>
-        <div className="mt-2 flex items-center space-x-3">
-          <span
-            className="text-sm py-1 px-2 rounded transition-colors duration-300"
-            style={{
-              backgroundColor: !isIron ? "#28251e" : "#3e3529",
-              color: "#fc961f"
-            }}
+        {/* Buttons for toggling Info Panels */}
+        <div className="flex items-center space-x-2">
+          <button 
+            onClick={() => setShowGeneral(prev => !prev)}
+            className="p-2 text-xl"
+            style={{ color: "#fc961f", background: "none", border: "none", cursor: "pointer" }}
+            title="General Info"
           >
-            Normal Account Completion Rates
-          </span>
-          <label className="relative inline-block w-12 h-6">
-            <input
-              type="checkbox"
-              checked={isIron}
-              onChange={() => {
-                setIsIron(prev => {
-                  const newValue = !prev;
-                  localStorage.setItem('isIron', JSON.stringify(newValue));
-                  setUserToggled(true);
-                  localStorage.setItem('userToggledMode', JSON.stringify(true));
-                  return newValue;
-                });
-              }}
-              className="peer sr-only"
-            />
-            <div className="w-full h-full rounded-full transition-colors duration-500" style={{ backgroundColor: "#28251e" }}></div>
-            <div className="absolute top-1 left-1 w-4 h-4 rounded-full transition-transform duration-500 transform peer-checked:translate-x-6" style={{ backgroundColor: "#fc961f" }}></div>
-          </label>
-          <span
-            className="text-sm py-1 px-2 rounded transition-colors duration-300"
-            style={{
-              backgroundColor: isIron ? "#28251e" : "#3e3529",
-              color: "#fc961f"
-            }}
+            ℹ️
+          </button>
+          <button 
+            onClick={() => setShowAccount(prev => !prev)}
+            className="p-2 text-xl"
+            style={{ color: "#fc961f", background: "none", border: "none", cursor: "pointer" }}
+            title="Completion Rates"
           >
-            Ironman Completion Rates
-          </span>
+            ⇄
+          </button>
         </div>
       </div>
-  
+
+      {/* InfoPanels component */}
+      <InfoPanels
+        isIron={isIron}
+        setIsIron={setIsIron}
+        setUserToggled={setUserToggled}
+        showGeneral={showGeneral}
+        setShowGeneral={setShowGeneral}
+        showAccount={showAccount}
+        setShowAccount={setShowAccount}
+      />
+
       {/* Divider */}
-      <div className="my-2" style={{ borderTop: "1px solid #5c5647", flexShrink: 0 }}></div>
-  
-      {/* Sticky Header Row */}
       <div
-        className="sticky top-0 z-10"
-        style={{
-          backgroundColor: "#494034",
-          borderBottom: "4px solid #5c5647",
-          flexShrink: 0
-        }}
-      >
-        <div className="grid grid-cols-3 gap-x-4 font-bold text-center py-2">
-          <div className="cursor-pointer hover:text-[#fc961f]" onClick={() => sortActivities('activity_name')}>
-            Activity Name {sortConfig.key === 'activity_name' ? (sortConfig.direction === 'asc' ? ' ⬆' : ' ⬇') : ''}
+        className="my-2"
+        style={{ borderTop: "1px solid #5c5647", flexShrink: 0 }}
+      ></div>
+
+      {/* Sticky Header Row */}
+      <div className="sticky top-0 z-10" style={{ backgroundColor: "#494034", borderBottom: "4px solid #5c5647" }}>
+        <div className="grid grid-cols-3 gap-x-4 font-bold py-2 items-center">
+          <div
+            className="cursor-pointer hover:text-[#fc961f] text-left"
+            onClick={() => sortActivities('activity_name')}
+          >
+            Activity Name
+            {sortConfig.key === 'activity_name'
+              ? sortConfig.direction === 'asc'
+                ? ' ⬆'
+                : ' ⬇'
+              : ''}
           </div>
-          <div className="cursor-pointer hover:text-[#fc961f]" onClick={() => sortActivities('time_to_next_log_slot')}>
-            Time to Next Log Slot {sortConfig.key === 'time_to_next_log_slot' ? (sortConfig.direction === 'asc' ? ' ⬆' : ' ⬇') : ''}
+          <div
+            className="cursor-pointer hover:text-[#fc961f] text-center place-self-center w-full"
+            onClick={() => sortActivities('time_to_next_log_slot')}
+          >
+            Time to Next Log Slot
+            {sortConfig.key === 'time_to_next_log_slot'
+              ? sortConfig.direction === 'asc'
+                ? ' ⬆'
+                : ' ⬇'
+              : ''}
           </div>
           <div className="text-center">Next Fastest Item</div>
         </div>
       </div>
-  
+
       {/* Scrollable container for activity rows */}
       <div
         ref={listContainerRef}
-        className="overflow-y-auto custom-scrollbar"
-        style={{ flex: 1 }}
+        className="custom-scrollbar"
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          paddingBottom: "1rem"
+        }}
       >
         {activities.length > 0 ? (
           <div>
@@ -520,6 +293,8 @@ function CompletionTime({ onRatesUpdated }) {
                   handleRateChange={handleRateChange}
                   formatTimeInHMS={formatTimeInHMS}
                   getTimeColor={getTimeColor}
+                  disabled={disabledActivities[act.activity_name] || false}
+                  handleDisableActivity={handleDisableActivity}
                 />
               );
             })}

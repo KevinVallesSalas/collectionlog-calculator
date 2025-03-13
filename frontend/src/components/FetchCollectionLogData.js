@@ -20,15 +20,13 @@ const Divider = () => (
 
 function FetchCollectionLogData({ onUploadComplete }) {
   const [username, setUsername] = useState('');
-  const [selectedFile, setSelectedFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState('');
   const [lastUpdated, setLastUpdated] = useState(localStorage.getItem('collectionLogLastUpdated') || '');
-  const [activeTab, setActiveTab] = useState('api');
 
   // Load collection log data from localStorage
   const savedLogData = JSON.parse(localStorage.getItem('collectionLogData'));
   const hasData = !!savedLogData;
-  const displayedUsername = hasData ? (savedLogData.username || "Manual Upload") : "No Collection Log Data";
+  const displayedUsername = hasData ? (savedLogData.username || "API Fetch") : "No Username";
   const uniqueObtained = hasData ? (savedLogData.uniqueObtained || 0) : 0;
   const uniqueItems = hasData ? (savedLogData.uniqueItems || 0) : 0;
 
@@ -50,15 +48,6 @@ function FetchCollectionLogData({ onUploadComplete }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   const containerWidth = Math.floor(windowSize.width * 0.9);
-
-  // When switching to the 'upload' tab, update next fastest item.
-  useEffect(() => {
-    if (activeTab === 'upload') {
-      updateNextFastestItem();
-      const storedItem = JSON.parse(localStorage.getItem('nextFastestItem')) || { id: null, name: '-' };
-      setNextFastestItem(storedItem);
-    }
-  }, [activeTab]);
 
   // Relative time helper
   const getRelativeTime = (timestamp) => {
@@ -91,22 +80,18 @@ function FetchCollectionLogData({ onUploadComplete }) {
     e.currentTarget.style.boxShadow = "0 4px #2a1e14";
   };
 
-  // Panel state: "closed", "buttons", or "tabs"
+  // Panel state: "closed", "buttons", or "api"
   const [panelStage, setPanelStage] = useState('closed');
-  const mainButtonLabel = hasData ? "Manage Data" : "Upload Data";
+  const mainButtonLabel = hasData ? "Manage Data" : "Fetch Data";
 
   // Toggle main button
   const handleMainButtonClick = () => {
-    if (!hasData) {
-      setPanelStage((prev) => (prev === 'tabs' ? 'closed' : 'tabs'));
-    } else {
-      setPanelStage((prev) => (prev === 'buttons' || prev === 'tabs' ? 'closed' : 'buttons'));
-    }
+    setPanelStage((prev) => (prev === 'api' || prev === 'buttons' ? 'closed' : 'api'));
   };
 
-  // Toggle between buttons and tabs
-  const handleUploadNewDataClick = () => {
-    setPanelStage((prev) => (prev === 'tabs' ? 'buttons' : 'tabs'));
+  // Toggle to API panel (for fetching new data)
+  const handleFetchNewDataClick = () => {
+    setPanelStage('api');
   };
 
   // Reset data handler
@@ -177,26 +162,6 @@ function FetchCollectionLogData({ onUploadComplete }) {
       .catch(error => setUploadStatus(`Error fetching data: ${error}`));
   };
 
-  // File handling
-  const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0] || null);
-  };
-  const handleFileUpload = () => {
-    if (!selectedFile) {
-      setUploadStatus('Please select a file before uploading.');
-      return;
-    }
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    fetch(`${BACKEND_URL}/log_importer/collection-log/`, {
-      method: 'POST',
-      body: formData,
-    })
-      .then(response => response.json())
-      .then(processFetchedLogData)
-      .catch(error => setUploadStatus(`Error uploading file: ${error}`));
-  };
-
   // Single transition for panel content based on panelStage
   const panelTransition = useTransition(panelStage === 'closed' ? null : panelStage, {
     from: { opacity: 0, maxHeight: 0 },
@@ -239,26 +204,6 @@ function FetchCollectionLogData({ onUploadComplete }) {
     textAlign: "center",
   };
 
-  const tabContainerStyle = {
-    display: "flex",
-    borderBottom: "3px solid #5c5647",
-    marginBottom: "1rem",
-  };
-
-  const tabButtonStyle = (tab) => ({
-    flex: 1,
-    padding: "0.8rem",
-    fontSize: "0.9rem",
-    fontWeight: "bold",
-    textTransform: "uppercase",
-    border: "none",
-    backgroundColor: activeTab === tab ? "#3e3529" : "#28251e",
-    color: "#fc961f",
-    cursor: "pointer",
-    transition: "background-color 0.2s ease",
-    borderBottom: activeTab === tab ? "4px solid #fc961f" : "none",
-  });
-
   const statusMessageStyle = {
     textAlign: "center",
     marginTop: "1rem",
@@ -296,18 +241,18 @@ function FetchCollectionLogData({ onUploadComplete }) {
             Reset Data
           </button>
           <button
-            onClick={handleUploadNewDataClick}
+            onClick={handleFetchNewDataClick}
             onMouseEnter={handleButtonMouseEnter}
             onMouseLeave={handleButtonMouseLeave}
             onMouseDown={handleButtonMouseDown}
             onMouseUp={handleButtonMouseUp}
             style={actionButtonStyle}
           >
-            Upload New Data
+            Fetch New Data
           </button>
         </div>
       );
-    } else if (stage === 'tabs') {
+    } else if (stage === 'api') {
       return (
         <div
           style={{
@@ -321,141 +266,84 @@ function FetchCollectionLogData({ onUploadComplete }) {
             overflow: "hidden",
           }}
         >
-          <div style={tabContainerStyle}>
-            <button style={tabButtonStyle('api')} onClick={() => setActiveTab('api')}>
-              API
-            </button>
-            <button style={tabButtonStyle('upload')} onClick={() => setActiveTab('upload')}>
-              Upload
-            </button>
-          </div>
-          {activeTab === 'api' && (
-            <div style={{ maxWidth: "500px", margin: "0 auto" }}>
-              <h3 style={{ textAlign: "center", marginBottom: "0.5rem", fontWeight: "bold" }}>
-                Fetch Data via collectionlog.net
-              </h3>
-              <p style={{ fontSize: "0.9rem", marginBottom: "1rem", textAlign: "center" }}>
-                Enter your <strong>collectionlog.net</strong> username.
-              </p>
-              <input
-                type="text"
-                placeholder="Enter username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  padding: "0.5rem",
-                  marginBottom: "0.5rem",
-                  backgroundColor: "#28251e",
-                  border: "1px solid #5c5647",
-                  color: "#fc961f",
-                  borderRadius: "4px",
-                }}
-              />
-              <div style={{ textAlign: "center" }}>
-                <button
-                  onClick={handleFetchUserData}
-                  onMouseEnter={handleButtonMouseEnter}
-                  onMouseLeave={handleButtonMouseLeave}
-                  onMouseDown={handleButtonMouseDown}
-                  onMouseUp={handleButtonMouseUp}
-                  style={{
-                    width: "90%",
-                    padding: "0.7rem",
-                    backgroundColor: "#6f675e",
-                    border: "1px solid #5c5647",
-                    color: "#fc961f",
-                    cursor: "pointer",
-                    borderRadius: "4px",
-                    fontWeight: "bold",
-                    fontSize: "1rem",
-                    boxShadow: "0 4px #2a1e14",
-                    transition: "all 0.1s ease-in-out",
-                    margin: "0 auto",
-                  }}
-                >
-                  Fetch User Data
-                </button>
-              </div>
-            </div>
-          )}
-          {activeTab === 'upload' && (
-            <div style={{ maxWidth: "500px", margin: "0 auto" }}>
-              <h3 style={{ textAlign: "center", marginBottom: "0.5rem", fontWeight: "bold" }}>
-                Manually Upload a JSON File
-              </h3>
-              <p style={{ fontSize: "0.9rem", marginBottom: "1rem", textAlign: "center" }}>
-                Follow these steps:
-              </p>
-              <ol style={{ textAlign: "left", margin: "0 auto", maxWidth: "500px", fontSize: "0.9rem" }}>
-                <li>Install the collectionlog plugin from the plugin hub on Runelite.</li>
-                <li>Click through all Collection Log pages.</li>
-                <li>Go to the Character Summary tab.</li>
-                <li>Right-click the Collection Log section and hit "Export Collection Log".</li>
-                <li>The file will be stored in the Runelite directory under <code>.runelite\collectionlog\exports</code>.</li>
-                <li>Select that file and upload it below.</li>
-              </ol>
-              {/* "Choose File" & "Upload File" side by side */}
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
-                <label
-                  style={{
-                    ...actionButtonStyle,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0.5rem",
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={handleButtonMouseEnter}
-                  onMouseLeave={handleButtonMouseLeave}
-                  onMouseDown={handleButtonMouseDown}
-                  onMouseUp={handleButtonMouseUp}
-                >
-                  Choose File
-                  <input
-                    type="file"
-                    onChange={handleFileChange}
-                    style={{ display: "none" }}
-                  />
-                </label>
-                <button
-                  onClick={handleFileUpload}
-                  onMouseEnter={handleButtonMouseEnter}
-                  onMouseLeave={handleButtonMouseLeave}
-                  onMouseDown={handleButtonMouseDown}
-                  onMouseUp={handleButtonMouseUp}
-                  style={actionButtonStyle}
-                >
-                  Upload File
-                </button>
-              </div>
-              {selectedFile && (
-                <p style={{ textAlign: "center", marginTop: "0.5rem" }}>
-                  Selected: <strong>{selectedFile.name}</strong>
-                </p>
-              )}
-            </div>
-          )}
-          {hasData && (
-            <div style={{ textAlign: "center" }}>
+          <h3 style={{ textAlign: "center", marginBottom: "0.5rem", fontWeight: "bold" }}>
+            Fetch Data via TempleOSRS API
+          </h3>
+          <p style={{ fontSize: "0.9rem", marginBottom: "1rem", textAlign: "center" }}>
+            Enter your <strong>TempleOSRS</strong> username.
+          </p>
+
+          {/* Centered container for input + buttons */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              width: "90%",
+              margin: "0 auto",
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Enter username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "0.5rem",
+                marginBottom: "0.5rem",
+                backgroundColor: "#28251e",
+                border: "1px solid #5c5647",
+                color: "#fc961f",
+                borderRadius: "4px",
+              }}
+            />
+
+            {/* Flex row for side-by-side buttons */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                width: "100%",
+                marginTop: "0.5rem",
+              }}
+            >
               <button
-                onClick={handleUploadNewDataClick}
-                style={{
-                  ...actionButtonStyle,
-                  backgroundColor: "#28251e",
-                  border: "1px solid #5c5647",
-                  margin: 0,
-                }}
+                onClick={handleFetchUserData}
                 onMouseEnter={handleButtonMouseEnter}
                 onMouseLeave={handleButtonMouseLeave}
                 onMouseDown={handleButtonMouseDown}
                 onMouseUp={handleButtonMouseUp}
+                style={{ ...actionButtonStyle, margin: 0, width: "48%" }}
               >
-                Back
+                Fetch User Data
+              </button>
+
+              <button
+                onClick={handleResetData}
+                onMouseEnter={handleButtonMouseEnter}
+                onMouseLeave={handleButtonMouseLeave}
+                onMouseDown={handleButtonMouseDown}
+                onMouseUp={handleButtonMouseUp}
+                style={{ ...actionButtonStyle, margin: 0, width: "48%" }}
+              >
+                Reset Data
               </button>
             </div>
-          )}
+          </div>
+
+          <p style={{ fontSize: "0.8rem", textAlign: "center", marginTop: "1rem" }}>
+            For instructions on how to synchronize your items, please see the{" "}
+            <a
+              href="https://templeosrs.com/faq.php#FAQ_22"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "#fc961f", textDecoration: "underline" }}
+            >
+              FAQ
+            </a>{" "}
+            on the TempleOSRS site.
+          </p>
         </div>
       );
     }
@@ -512,9 +400,10 @@ function FetchCollectionLogData({ onUploadComplete }) {
       >
         {/* Header */}
         <div style={{ fontSize: "1.4rem", fontWeight: "bold", marginBottom: "1rem", textAlign: "center" }}>
-          {displayedUsername} - {uniqueObtained}/{uniqueItems}
+          {displayedUsername}'s Collection Log - {uniqueObtained}/{uniqueItems}
         </div>
         <Divider />
+
         {/* Next Fastest Item */}
         <div
           style={{

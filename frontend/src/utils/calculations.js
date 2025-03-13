@@ -205,3 +205,33 @@ export function updateNextFastestItem() {
     localStorage.setItem('nextFastestItemName', '-');
   }
 }
+
+/**
+ * Converts a time in days to a formatted string "HH:MM:SS".
+ */
+export function formatTimeInHMS(days) {
+  if (days === 'Done!' || days === 'No available data') return days;
+  if (typeof days !== 'number' || days <= 0) return 'Done!';
+  const totalSeconds = Math.floor(days * 24 * 3600);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+/**
+ * Returns a color based on the time value.
+ * If time is 'Done!' or 'No available data', returns a default color.
+ * Otherwise, the color transitions from green to red as time increases from 0 to 2 days.
+ */
+export function getTimeColor(time) {
+  if (time === 'Done!' || time === 'No available data' || typeof time !== 'number') return '#c4b59e';
+  const minTime = 0, maxTime = 2;
+  let t = (time - minTime) / (maxTime - minTime);
+  t = Math.min(Math.max(t, 0), 1);
+  const r = Math.round(t * 255);
+  const g = Math.round(255 - t * 255);
+  return `rgb(${r}, ${g}, 0)`;
+}
+
+
