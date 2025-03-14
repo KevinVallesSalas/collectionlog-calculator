@@ -5,11 +5,9 @@ services:
     runtime: docker
     plan: free
     dockerfilePath: backend/Dockerfile
-    rootDir: backend
 
   - type: web
     name: collection-log-frontend
     runtime: docker
     plan: free
     dockerfilePath: frontend/Dockerfile
-    rootDir: frontend
