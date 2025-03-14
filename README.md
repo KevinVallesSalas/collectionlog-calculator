@@ -24,6 +24,17 @@ To update the completion rates used in the application:
    ```
 4. Restart the backend to apply the changes.
 
+## Updating Collection Log Items
+After a game update, run the following scripts to update new collection log items and refresh wiki images/links:
+1. Generate new items and sections:
+   ```sh
+   python backend/manage.py generate_items
+   ```
+2. Update wiki images and links:
+   ```sh
+   python backend/manage.py fetch_item_images
+   ```
+
 ## Installation
 1. Clone the repository:
    ```sh
