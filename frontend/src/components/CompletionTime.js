@@ -145,11 +145,18 @@ function CompletionTime({ onRatesUpdated }) {
   };
 
   const handleDisableActivity = (activityName) => {
+    // Update the disabled state
     setDisabledActivities(prev => {
       const newState = { ...prev, [activityName]: !prev[activityName] };
       localStorage.setItem('disabledActivities', JSON.stringify(newState));
       return newState;
     });
+    // If the toggled activity is active, delay the scroll to account for reordering
+    if (activityName === expandedActivity && activeRowRef.current) {
+      setTimeout(() => {
+        activeRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 200);
+    }
   };
 
   const sortActivities = (key) => {
@@ -195,25 +202,55 @@ function CompletionTime({ onRatesUpdated }) {
       }}
     >
       {/* Header + Info Buttons in one row */}
-      <div className="flex items-center justify-between w-full" style={{ flexShrink: 0 }}>
+      <div className="flex items-center justify-center w-full" style={{ flexShrink: 0, position: 'relative' }}>
         <h1 className="text-2xl font-bold" style={{ color: "#fc961f" }}>
           Next Fastest Log Slot
         </h1>
         {/* Buttons for toggling Info Panels */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2" style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)' }}>
           <button 
             onClick={() => setShowGeneral(prev => !prev)}
-            className="p-2 text-xl"
-            style={{ color: "#fc961f", background: "none", border: "none", cursor: "pointer" }}
+            className="p-3 text-2xl"
+            style={{ 
+              color: "#fc961f",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              transition: "transform 0.2s, color 0.2s",
+              transform: "scale(1)",
+              textAlign: "center",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center"
+            }}
             title="General Info"
+            onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.2)"}
+            onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+            onMouseDown={(e) => e.currentTarget.style.transform = "scale(1.1)"}
+            onMouseUp={(e) => e.currentTarget.style.transform = "scale(1.2)"}
           >
             ℹ️
           </button>
           <button 
             onClick={() => setShowAccount(prev => !prev)}
-            className="p-2 text-xl"
-            style={{ color: "#fc961f", background: "none", border: "none", cursor: "pointer" }}
+            className="p-3 text-2xl"
+            style={{ 
+              color: "#fc961f",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              transition: "transform 0.2s, color 0.2s",
+              transform: "scale(1)",
+              textAlign: "center",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center"
+            }}
             title="Completion Rates"
+            onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.2)"}
+            onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+            onMouseDown={(e) => e.currentTarget.style.transform = "scale(1.1)"}
+            onMouseUp={(e) => e.currentTarget.style.transform = "scale(1.2)"}
           >
             ⇄
           </button>
@@ -241,7 +278,7 @@ function CompletionTime({ onRatesUpdated }) {
       <div className="sticky top-0 z-10" style={{ backgroundColor: "#494034", borderBottom: "4px solid #5c5647" }}>
         <div className="grid grid-cols-3 gap-x-4 font-bold py-2 items-center">
           <div
-            className="cursor-pointer hover:text-[#fc961f] text-left"
+            className="cursor-pointer text-center transition-all duration-200 transform origin-center hover:scale-110 hover:underline"
             onClick={() => sortActivities('activity_name')}
           >
             Activity Name
@@ -252,8 +289,9 @@ function CompletionTime({ onRatesUpdated }) {
               : ''}
           </div>
           <div
-            className="cursor-pointer hover:text-[#fc961f] text-center place-self-center w-full"
+            className="cursor-pointer text-center transition-all duration-200 transform hover:scale-110 hover:underline"
             onClick={() => sortActivities('time_to_next_log_slot')}
+            style={{ textAlign: 'center', width: '100%' }}
           >
             Time to Next Log Slot
             {sortConfig.key === 'time_to_next_log_slot'
@@ -262,7 +300,9 @@ function CompletionTime({ onRatesUpdated }) {
                 : ' ⬇'
               : ''}
           </div>
-          <div className="text-center">Next Fastest Item</div>
+          <div className="cursor-default text-center">
+            Next Fastest Item
+          </div>
         </div>
       </div>
 

@@ -82,7 +82,113 @@ function FetchCollectionLogData({ onUploadComplete }) {
 
   // Panel state: "closed", "buttons", or "api"
   const [panelStage, setPanelStage] = useState('closed');
-  const mainButtonLabel = hasData ? "Manage Data" : "Fetch Data";
+  const mainButtonLabel = panelStage === 'closed' ? 'Fetch Data via API' : 'Close Panel';
+  // NEW state for info panels:
+  const [selectedInfo, setSelectedInfo] = useState(null);
+
+  // Toggle info panel function
+  const toggleInfo = (panel) => {
+    setSelectedInfo(selectedInfo === panel ? null : panel);
+  };
+
+  // Define info panel transition
+  const infoTransition = useTransition(selectedInfo, {
+    from: { opacity: 0, maxHeight: 0 },
+    enter: { opacity: 1, maxHeight: 800 },
+    leave: { opacity: 0, maxHeight: 0 },
+    config: { duration: 300 },
+    key: selectedInfo,
+  });
+
+  // Function to render info panel content
+  const renderInfoContent = (panel) => {
+    if (panel === 'about') {
+      return (
+        <div>
+          <p style={{ textAlign: "center", margin: "0.5rem 0", fontSize: "1.2rem" }}>
+            Welcome to <strong>OSRS Collection Log Adviser</strong> – the ultimate tool to streamline your collection log slot progress!<br/>Below are the main sections of the app:
+          </p>
+          <div style={{ marginBottom: "1rem", padding: "0.5rem", border: "1px solid #5c5647", borderRadius: "8px", backgroundColor: "#28251e" }}>
+            <p style={{ textAlign: "left", margin: "0.5rem 0", fontSize: "1rem", color: "#fc961f" }}>
+              <strong>Get Started (Upload Your Data)</strong>
+            </p>
+            <p style={{ textAlign: "left", margin: "0.5rem 0", fontSize: "1rem" }}>
+              Start by uploading your collection log data. In this section, you'll use the TempleOSRS API to fetch your log data, ensuring your Collection Log and Fastest Log Slots sections are up to date with your in-game progress.
+            </p>
+          </div>
+          <div style={{ marginBottom: "1rem", padding: "0.5rem", border: "1px solid #5c5647", borderRadius: "8px", backgroundColor: "#28251e" }}>
+            <p style={{ textAlign: "left", margin: "0.5rem 0", fontSize: "1rem", color: "#fc961f" }}>
+              <strong>Collection Log</strong>
+            </p>
+            <p style={{ textAlign: "left", margin: "0.5rem 0", fontSize: "1rem" }}>
+              View all your collected items in one convenient location. This tab provides an at-a-glance summary of your progress, so you can quickly see which items you’ve acquired and which ones remain.
+            </p>
+          </div>
+          <div style={{ marginBottom: "1rem", padding: "0.5rem", border: "1px solid #5c5647", borderRadius: "8px", backgroundColor: "#28251e" }}>
+            <p style={{ textAlign: "left", margin: "0.5rem 0", fontSize: "1rem", color: "#fc961f" }}>
+              <strong>Fastest Log Slots</strong>
+            </p>
+            <p style={{ textAlign: "left", margin: "0.5rem 0", fontSize: "1rem" }}>
+              Discover which in-game activities grant log slots the fastest. This section enables you to filter and sort activities by the estimated time to your next log slot. It also allows you to adjust the completion rates and select between completion rates for a Main account or an Ironman.
+            </p>
+          </div>
+        </div>
+      );
+    } else if (panel === 'api') {
+      return (
+        <div>
+          <p style={{ textAlign: "left", margin: "0.5rem 0", fontSize: "1rem" }}>
+            Your personalized experience begins with uploading your collection log data.
+            The app leverages the TempleOSRS API to seamlessly retrieve and integrate your log details.
+            Once your data is fetched, you can easily track your collection progress and determine the most efficient activities to maximize your log slots.
+          </p>
+          <h4 style={{ textAlign: "left", margin: "0.5rem 0", color: "#fc961f", fontSize: "1rem" }}>
+            <strong>How do I syncronize my items?</strong>
+          </h4>
+          <ul style={{ textAlign: "left", margin: "0.5rem 0", color: "#fc961f", paddingLeft: "1.5rem", listStyleType: "disc", fontSize: "1rem" }}>
+            <li>
+              Open your configuration tab in RuneLite. <span style={{ color: "red" }}>(Red highlight)</span>
+            </li>
+            <li>
+              Navigate to the plugin hub. <span style={{ color: "blue" }}>(Blue highlight)</span>
+            </li>
+            <li>
+              Search for "templeosrs" and install the plugin. <span style={{ color: "yellow" }}>(Yellow highlight)</span>
+            </li>
+            <li>
+              Install the TempleOSRS plugin. <span style={{ color: "pink" }}>(Pink highlight)</span>
+            </li>
+            <li>
+              Open your collection log interface and there should be a button on the top right corner to synchronize your items with TempleOSRS server. <span style={{ color: "red" }}>(Red highlight)</span>
+            </li>
+          </ul>
+          <img src="https://templeosrs.com/resources/collection-log/setup/plugin-hub.png" alt="Plugin Hub" style={{ maxWidth: "100%", marginBottom: "0.5rem" }} />
+          <img src="https://templeosrs.com/resources/collection-log/setup/clog-sync.png" alt="Collection Log Sync" style={{ maxWidth: "100%", marginBottom: "0.5rem" }} />
+          <p style={{ textAlign: "left", margin: "0.5rem 0", fontSize: "1rem" }}>
+            For more information, please refer to the <a href="https://templeosrs.com/faq.php#FAQ_22" target="_blank" rel="noopener noreferrer" style={{ color: "#fc961f", textDecoration: "underline" }}>FAQ on the TempleOSRS site</a>.
+          </p>
+        </div>
+      );
+    } else if (panel === 'credits') {
+      return (
+        <div>
+          <p style={{ fontSize: "1rem", textAlign: "left", margin: "0.5rem 0" }}>
+            <strong>Log Advisor Spreadsheet:</strong><br/>
+            The app utilizes the completion rates and activity index from the original Log Adviser spreadsheet by Main Mukkor. These components power our calculations, ensuring that the activity estimates are both accurate and tailored to your gameplay.
+          </p>
+          <p style={{ fontSize: "1rem", textAlign: "left", margin: "0.5rem 0" }}>
+            <strong>Log Hunters Discord:</strong><br/>
+            A special shoutout to the Log Hunters Discord community for hosting and supporting the spreadsheet. For updates, tips, and anything collection log related, be sure to check out the Discord server!
+          </p>
+          <p style={{ fontSize: "1rem", textAlign: "left", margin: "0.5rem 0" }}>
+            <strong>OSRS Wiki:</strong><br/>
+            A huge thank you to the wiki – arguably the best resource for any game. They are used in this app to provide images and item information links.
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   // Toggle main button
   const handleMainButtonClick = () => {
@@ -217,6 +323,12 @@ function FetchCollectionLogData({ onUploadComplete }) {
     maxWidth: "600px",
     margin: "1rem auto 0 auto",
   };
+
+  // Helper function to get active style for section buttons
+  const getSectionButtonStyle = (section) => ({
+    ...mainButtonStyle,
+    ...(selectedInfo === section && { backgroundColor: "#8f877f", transform: "translateY(2px)", boxShadow: "none" })
+  });
 
   // Render panel content based on panelStage
   const renderPanelContent = (stage) => {
@@ -383,8 +495,78 @@ function FetchCollectionLogData({ onUploadComplete }) {
         borderRadius: "8px",
         display: "flex",
         flexDirection: "column",
+        justifyContent: "center", // added for vertical centering
       }}
     >
+      {/* Getting Started Container */}
+      <div style={{
+        width: "100%",
+        backgroundColor: "#3e3529",
+        border: "6px solid #5c5647",
+        borderRadius: "12px",
+        padding: "1rem",
+        marginBottom: "1rem",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        color: "#fc961f"
+      }}>
+        <h3 style={{ fontSize: "1.6rem", fontWeight: "bold", marginBottom: "1rem", textAlign: "center" }}>
+          OSRS Collection Log Advisor
+        </h3>
+        {/* Buttons Row */}
+        <div style={{ display: "flex", justifyContent: "space-around", width: "90%", marginBottom: "1rem" }}>
+          <button
+            onClick={() => toggleInfo('about')}
+            onMouseEnter={handleButtonMouseEnter}
+            onMouseLeave={handleButtonMouseLeave}
+            onMouseDown={handleButtonMouseDown}
+            onMouseUp={handleButtonMouseUp}
+            style={getSectionButtonStyle('about')}
+          >
+            About the App
+          </button>
+          <button
+            onClick={() => toggleInfo('api')}
+            onMouseEnter={handleButtonMouseEnter}
+            onMouseLeave={handleButtonMouseLeave}
+            onMouseDown={handleButtonMouseDown}
+            onMouseUp={handleButtonMouseUp}
+            style={getSectionButtonStyle('api')}
+          >
+            TempleOSRS API
+          </button>
+          <button
+            onClick={() => toggleInfo('credits')}
+            onMouseEnter={handleButtonMouseEnter}
+            onMouseLeave={handleButtonMouseLeave}
+            onMouseDown={handleButtonMouseDown}
+            onMouseUp={handleButtonMouseUp}
+            style={getSectionButtonStyle('credits')}
+          >
+            Credits
+          </button>
+        </div>
+        {/* Animated Info Panel */}
+        {infoTransition((styleProps, item) => 
+          item ? (
+            <animated.div style={{
+              ...styleProps,
+              overflow: "hidden",
+              width: "90%",
+              textAlign: "left",
+              padding: "0.5rem",
+              backgroundColor: "#28251e",
+              border: "2px solid #5c5647",
+              borderRadius: "8px",
+              marginBottom: "0.5rem"
+            }}>
+              {renderInfoContent(item)}
+            </animated.div>
+          ) : null
+        )}
+      </div>
+      
       {/* Overview Container */}
       <div
         style={{
@@ -398,52 +580,56 @@ function FetchCollectionLogData({ onUploadComplete }) {
           alignItems: "center",
         }}
       >
-        {/* Header */}
-        <div style={{ fontSize: "1.4rem", fontWeight: "bold", marginBottom: "1rem", textAlign: "center" }}>
-          {displayedUsername}'s Collection Log - {uniqueObtained}/{uniqueItems}
-        </div>
-        <Divider />
-
-        {/* Next Fastest Item */}
-        <div
-          style={{
-            backgroundColor: "#28251e",
-            border: "2px solid #5c5647",
-            borderRadius: "8px",
-            width: "90%",
-            marginBottom: "1rem",
-            padding: "0.5rem",
-            textAlign: "center",
-          }}
-        >
-          <div style={{ fontSize: "1.2rem", color: "#fc961f", marginBottom: "0.3rem" }}>
-            Next Fastest Item
-          </div>
-          {nextFastestItem.name === '-' ? (
-            <div style={{ fontSize: "1rem", fontWeight: "bold", color: "#c2b59b" }}>-</div>
-          ) : (
-            <a
-              href={`https://oldschool.runescape.wiki/w/${encodeURIComponent(nextFastestItem.name)}`}
-              target="_blank"
-              rel="noopener noreferrer"
+        { hasData ? (
+          <>
+            {/* Header */}
+            <div style={{ fontSize: "1.4rem", fontWeight: "bold", marginBottom: "1rem", textAlign: "center" }}>
+              {displayedUsername}'s Collection Log - {uniqueObtained}/{uniqueItems}
+            </div>
+            <Divider />
+            {/* Next Fastest Item */}
+            <div
               style={{
-                color: "#fc961f",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                textDecoration: "none",
+                backgroundColor: "#28251e",
+                border: "2px solid #5c5647",
+                borderRadius: "8px",
+                width: "90%",
+                marginBottom: "1rem",
+                padding: "0.5rem",
+                textAlign: "center",
               }}
             >
-              <ItemImage itemId={nextFastestItem.id} fallbackName={nextFastestItem.name} className="w-6 h-6" disableLink={true} />
-              <span style={{ fontSize: "1.1rem", fontWeight: "bold", marginTop: "0.2rem" }}>
-                {nextFastestItem.name}
-              </span>
-            </a>
-          )}
-        </div>
-
-        {/* Main Toggle Button */}
+              {nextFastestItem.name === '-' ? (
+                <div style={{ fontSize: "1rem", fontWeight: "bold", color: "#c2b59b" }}>-</div>
+              ) : (
+                <a
+                  href={`https://oldschool.runescape.wiki/w/${encodeURIComponent(nextFastestItem.name)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: "#fc961f",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    textDecoration: "none",
+                  }}
+                >
+                  <ItemImage itemId={nextFastestItem.id} fallbackName={nextFastestItem.name} className="w-6 h-6" disableLink={true} />
+                  <span style={{ fontSize: "1.1rem", fontWeight: "bold", marginTop: "0.2rem" }}>
+                    {nextFastestItem.name}
+                  </span>
+                </a>
+              )}
+            </div>
+          </>
+        ) : (
+          <div style={{ fontSize: "1.2rem", marginBottom: "1rem", textAlign: "center" }}>
+            No data uploaded.
+          </div>
+        )}
+        {/* Main Toggle Button and other content */}
+        {/* ...existing code for main toggle button, panel content, last updated... */}
         <button
           onClick={handleMainButtonClick}
           onMouseEnter={handleButtonMouseEnter}

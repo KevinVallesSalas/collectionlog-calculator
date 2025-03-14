@@ -51,9 +51,9 @@ function App() {
         <nav className="bg-[#2A1E14] border-b-4 border-[#4A3B2A] py-2">
           <div className="max-w-4xl mx-auto flex justify-around text-yellow-300 text-sm font-bold uppercase">
             {[
-              { key: 'upload', label: 'Upload' },
+              { key: 'upload', label: 'Get Started' },
               { key: 'collection', label: 'Collection Log' },
-              { key: 'completion', label: 'Completion Time' },
+              { key: 'completion', label: 'Fastest Log Slots' }
             ].map(({ key, label }) => (
               <button
                 key={key}

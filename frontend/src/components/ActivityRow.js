@@ -75,7 +75,7 @@ function ActivityRow({
       <div
         className="grid grid-cols-3 gap-x-4 py-2 items-center cursor-pointer px-4 transition-colors duration-500"
         style={{
-          backgroundColor: isActive ? "#6f675e" : "#494034",
+          backgroundColor: isActive ? "#6f675e" : "#594e3f",
           borderBottom: "1px solid #5c5647"
         }}
         onClick={() => toggleExpandedActivity(act.activity_name)}
