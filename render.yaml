@@ -1,19 +1,13 @@
-version: 1
+version: "1"
 services:
   - type: web
     name: collection-log-backend
-    env: docker
+    runtime: docker
     plan: free
-    buildContext: ./backend
-    dockerfilePath: Dockerfile
-    ports:
-      - port: 8000
+    dockerfilePath: backend/Dockerfile
 
   - type: web
     name: collection-log-frontend
-    env: docker
+    runtime: docker
     plan: free
-    buildContext: ./frontend
-    dockerfilePath: Dockerfile
-    ports:
-      - port: 3000
+    dockerfilePath: frontend/Dockerfile
