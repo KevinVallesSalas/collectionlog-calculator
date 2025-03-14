@@ -1,11 +1,10 @@
+version: 1
 services:
   - type: web
     name: collection-log-backend
     env: docker
     plan: free
-    # The build context is set to the backend folder
     buildContext: ./backend
-    # Path to the Dockerfile within the backend folder.
     dockerfilePath: Dockerfile
     ports:
       - port: 8000
@@ -14,9 +13,7 @@ services:
     name: collection-log-frontend
     env: docker
     plan: free
-    # Build context for the frontend
     buildContext: ./frontend
-    # Specify the Dockerfile for your frontend
     dockerfilePath: Dockerfile
     ports:
       - port: 3000
