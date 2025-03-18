@@ -60,13 +60,13 @@ class Command(BaseCommand):
             for sequence, row in enumerate(reader, start=1):
                 try:
                     completion_rate = CompletionRate.objects.get(activity_index=int(row['Activity index']))
-                    neither_inverse_value = self.safe_float(row['Neither^(-1)'], None)
+                    neither_inverse_value = self.safe_float(row.get('Neither^(-1)', '0'))
 
                     ActivityMap.objects.create(
                         completion_rate=completion_rate,
                         activity_name=row['Activity name'].strip(),
-                        completions_per_hour=self.safe_float(row['Completions per hour']),
-                        additional_time_to_first_completion=self.safe_float(row['Additional time to first completion (hours)']),
+                        completions_per_hour=self.safe_float(row.get('Completions per hour', '0')),
+                        additional_time_to_first_completion=self.safe_float(row.get('Additional time to first completion (hours)', '0')),
                         item_id=int(row['Item ID']),
                         item_name=row['Item name'].strip(),
                         requires_previous=row['Requires previous'].strip().lower() == 'true',
