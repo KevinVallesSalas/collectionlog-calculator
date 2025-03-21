@@ -12,7 +12,7 @@ The Collection Log App allows users to track their collection log progress, view
 
 ## Live Demo
 You can access a live version of the Collection Log App at:
-[https://collection-log-advisor.onrender.com](https://collection-log-advisor.onrender.com/)
+[https://collection-log-advisor.onrender.com](https://collection-log-advisor.onrender.com/) (The app might take up to a minute to load after periods of inactivity)
 
 ## Updating Completion Rates
 To update the completion rates used in the application:
@@ -72,7 +72,4 @@ You can run the entire application using Docker. Follow these steps:
      - The backend (if needed) at `http://localhost:8000`
 
 ## Live Demo
-You can access a live version of the Collection Log App at: [https://collection-log-advisor.onrender.com/](https://collection-log-advisor.onrender.com/)
-
-## Contributing
-Feel free to submit issues or contribute to the project by creating pull requests!
+You can access a live version of the Collection Log App at: [https://collection-log-advisor.onrender.com/](https://collection-log-advisor.onrender.com/) (The app might take up to a minute to load after periods of inactivity)
